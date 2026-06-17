@@ -100,7 +100,7 @@ const textColor = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 items-center justify-center h-screen">
+  <div class="flex flex-col gap-4 items-center justify-center h-screen container mx-auto">
     <TextType 
     :text="['Selamat Datang', 'Warung Zavi']"
     :typing-speed="75"

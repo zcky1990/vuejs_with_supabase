@@ -1,8 +1,13 @@
 import type { Session } from '@supabase/supabase-js'
 import type { Router } from 'vue-router'
 import { clearAuthCookies, getCookie, setCookie } from './cookies'
-
 import { supabase } from './supabase'
+
+const GUEST_ROUTES = ['/login', '/sign-up'] as const
+
+function isGuestRoute(path: string) {
+  return GUEST_ROUTES.includes(path as (typeof GUEST_ROUTES)[number])
+}
 
 export const persistAuthSession = (session: Session) => {
   setCookie('_access_token', session.access_token)
@@ -14,18 +19,23 @@ export const persistAuthSession = (session: Session) => {
   }
 }
 
-export const validateOrRefreshSession = async (router: Router) => {
+export const validateOrRefreshSession = async (
+  router: Router,
+  currentPath = router.currentRoute.value.path,
+): Promise<boolean> => {
   const accessToken = getCookie('_access_token')
   const refreshToken = getCookie('_refresh_token')
 
-  if (!accessToken || !refreshToken) return
+  if (!accessToken || !refreshToken) return false
 
-  const supabaseClient = await supabase()
+  const supabaseClient = supabase()
 
   const logout = async () => {
     await supabaseClient.auth.signOut()
     clearAuthCookies()
-    router.push('/login')
+    if (!isGuestRoute(currentPath)) {
+      router.push('/login')
+    }
   }
 
   const refresh = async () => {
@@ -46,17 +56,17 @@ export const validateOrRefreshSession = async (router: Router) => {
   })
 
   if (error || !data.session) {
-    await refresh()
-    return
+    return refresh()
   }
 
   const { error: userError } = await supabaseClient.auth.getUser()
   if (userError) {
-    await refresh()
-    return
+    return refresh()
   }
 
   if (data.session.access_token !== accessToken) {
     persistAuthSession(data.session)
   }
+
+  return true
 }

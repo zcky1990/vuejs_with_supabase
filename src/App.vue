@@ -1,15 +1,7 @@
 <script setup lang="ts">
-import { RouterView, useRouter } from 'vue-router'
-import { validateOrRefreshSession } from '@/lib/auth'
-import { onMounted } from 'vue'
+import { RouterView } from 'vue-router'
 import AppAlert from '@/components/AppAlert.vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
-
-const router = useRouter()
-
-onMounted(() => {
-  validateOrRefreshSession(router)
-})
 </script>
 
 <template>

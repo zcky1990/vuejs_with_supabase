@@ -40,10 +40,10 @@ function formatPrice(price: number) {
         </CardHeader>
         <CardContent class="grid gap-1 text-sm text-muted-foreground">
           <p><span class="font-medium text-foreground">Harga:</span> {{ formatPrice(product.price) }}</p>
-          <p><span class="font-medium text-foreground">Stok:</span> {{ product.stock_quantity }}</p>
+          <!-- <p><span class="font-medium text-foreground">Stok:</span> {{ product.stock_quantity }}</p>
           <p v-if="product.sku">
             <span class="font-medium text-foreground">SKU:</span> {{ product.sku }}
-          </p>
+          </p> -->
         </CardContent>
       </Card>
     </div>
