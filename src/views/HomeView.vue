@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import Search from '../components/Search.vue'
+import ApplicationLayout from '@/layouts/ApplicationLayout.vue'
+import Search from '@/components/Search.vue'
 </script>
 
 <template>
-  <main>
+  <ApplicationLayout>
     <Search />
-  </main>
+  </ApplicationLayout>
 </template>

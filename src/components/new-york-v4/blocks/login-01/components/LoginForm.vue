@@ -18,16 +18,20 @@ import {
 import { Input } from '@/components/ui/input'
 import { ref } from 'vue'
 
-const props = defineProps<{
-  class?: HTMLAttributes["class"]
-}>()
+interface LoginProps {
+  class?: HTMLAttributes["class"],
+  title?: string,
+  description?: string,
+  onSubmit: (email: string, password: string) => void,
+}
 
-const emit = defineEmits<{
-  (e: 'submit', email: string, password: string): void
-}>()
+const props = withDefaults(defineProps<LoginProps>(), {
+  title: 'Login to your account',
+  description: 'Enter your email below to login to your account',
+})
 
 const handleSubmit = () => {
-  emit('submit', email.value, password.value)
+  props.onSubmit(email.value, password.value)
 }
 
 const email = ref('')
@@ -39,9 +43,9 @@ const password = ref('')
   <div :class="cn('flex flex-col gap-6', props.class)">
     <Card>
       <CardHeader>
-        <CardTitle>Login to your account</CardTitle>
+        <CardTitle>{{ props.title }}</CardTitle>
         <CardDescription>
-          Enter your email below to login to your account
+          {{ props.description }}
         </CardDescription>
       </CardHeader>
       <CardContent>
