@@ -183,3 +183,43 @@ export type RestockInput = {
   unit_cost: number
   notes?: string | null
 }
+
+export type DateRangePreset = 'today' | '7d' | '30d' | 'month' | 'custom'
+
+export type AnalyticsDateRange = {
+  start: string
+  end: string
+}
+
+export type AnalyticsSummary = {
+  revenue: number
+  cogs: number
+  grossProfit: number
+  marginPercent: number
+  transactionCount: number
+  paidCount: number
+  paidAmount: number
+  unpaidCount: number
+  unpaidAmount: number
+  restockSpend: number
+  outstandingDebt: number
+  inventoryValue: number
+  salesWithoutCogsCount: number
+}
+
+export type ProductAnalyticsRow = {
+  productId: string
+  productName: string
+  quantitySold: number
+  revenue: number
+  cogs: number
+  grossProfit: number
+  marginPercent: number
+}
+
+export type PaymentBreakdownRow = {
+  method: PaymentMethod
+  label: string
+  transactionCount: number
+  amount: number
+}

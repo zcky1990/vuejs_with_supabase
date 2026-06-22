@@ -16,7 +16,7 @@ import {
 
 import { getCookie, clearAuthCookies } from '@/lib/cookies'
 import { useRouter, RouterLink } from 'vue-router'
-import { ClipboardList, LayoutDashboard, List, LogOut, Package, PackagePlus, Receipt, Settings, User, Users } from '@lucide/vue'
+import { BarChart3, ClipboardList, LayoutDashboard, List, LogOut, Package, PackagePlus, Receipt, Settings, User, Users } from '@lucide/vue'
 
 
 const userEmail = getCookie('_user_email')
@@ -109,6 +109,22 @@ const data = {
                 <RouterLink to="/stock/restock">
                   <PackagePlus />
                   <span>Restock</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>Laporan</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child>
+                <RouterLink to="/analytics">
+                  <BarChart3 />
+                  <span>Analisis</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
