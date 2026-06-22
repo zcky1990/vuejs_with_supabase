@@ -4,6 +4,7 @@ import LoginView from '@/views/LoginView.vue'
 import SignUpView from '@/views/SignUpView.vue'
 import { validateOrRefreshSession } from '@/lib/auth'
 import DashboardView from '@/views/DashboardView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,10 +29,19 @@ const router = createRouter({
       name: 'dashboard',
       component: DashboardView,
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
+    },
   ],
 })
 
 router.beforeEach(async (to) => {
+  if (to.name === 'not-found') {
+    return true
+  }
+
   if (to.path === '/') {
     return true
   }
