@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import {
   getLineSubtotal,
+  expandItemsForSubmit,
   PRE_ORDER_ITEMS_WITH_ADDONS_SELECT,
 } from './addon'
 import { createQueueEntry } from './queue'
@@ -109,9 +110,10 @@ export const createPreOrder = async (input: PreOrderInput) => {
   }
 
   const payload = validated.data
+  const items = expandItemsForSubmit(payload.items)
   const productIds = [
-    ...payload.items.map((item) => item.product_id),
-    ...payload.items.flatMap((item) => (item.addons ?? []).map((addon) => addon.addon_product_id)),
+    ...items.map((item) => item.product_id),
+    ...items.flatMap((item) => (item.addons ?? []).map((addon) => addon.addon_product_id)),
   ]
 
   const { stockById, error: stockError } = await getProductsStockMap([...new Set(productIds)])
@@ -119,7 +121,7 @@ export const createPreOrder = async (input: PreOrderInput) => {
     return { preOrder: null, error: stockError }
   }
 
-  const stockCheck = validateStock(payload.items, stockById)
+  const stockCheck = validateStock(items, stockById)
   if (!stockCheck.ok) {
     return { preOrder: null, error: { message: stockCheck.message! } }
   }
@@ -130,7 +132,7 @@ export const createPreOrder = async (input: PreOrderInput) => {
     return { preOrder: null, error: numberError }
   }
 
-  const totalAmount = payload.items.reduce(
+  const totalAmount = items.reduce(
     (sum, item) => sum + getLineSubtotal(item.quantity, item.unit_price, item.addons),
     0,
   )
@@ -156,7 +158,7 @@ export const createPreOrder = async (input: PreOrderInput) => {
     return { preOrder: null, error: insertError }
   }
 
-  for (const item of payload.items) {
+  for (const item of items) {
     const subtotal = item.quantity * item.unit_price
     const { data: insertedItem, error: itemError } = await supabaseClient
       .from('pre_order_items')

@@ -1,5 +1,5 @@
 import { computed, onMounted, ref, watch } from 'vue'
-import { buildCartLineKey, cartAddonsToInput, getLineSubtotal, type CartAddonSelection } from '@/lib/addon'
+import { buildBundleLineKey, buildCartLineKey, cartAddonsToInput, expandItemsForSubmit, getLineSubtotal, hasBundleAddons, type CartAddonSelection } from '@/lib/addon'
 import { formatPrice, formatQueueNumber } from '@/lib/format'
 import { getProducts, getProductAddonsMap } from '@/lib/product'
 import { createQueueEntry } from '@/lib/queue'
@@ -136,6 +136,23 @@ const requiresImmediatePayment = computed(() => isWalkInCustomer(selectedCustome
   }
 
   function addToCart(product: Product, quantity = 1, addons: CartAddonSelection[] = []) {
+    if (hasBundleAddons(addons)) {
+      for (let i = 0; i < quantity; i++) {
+        if (!hasEnoughStock(product, addons, 1)) {
+          alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
+          return
+        }
+
+        cart.value.push({
+          lineKey: buildBundleLineKey(product.id, addons),
+          product,
+          quantity: 1,
+          addons,
+        })
+      }
+      return
+    }
+
     const lineKey = buildCartLineKey(product.id, addons)
     const existing = getCartItem(lineKey)
 
@@ -202,6 +219,26 @@ const requiresImmediatePayment = computed(() => isWalkInCustomer(selectedCustome
     const item = getCartItem(lineKey)
     if (!item) return
 
+    if (hasBundleAddons(item.addons)) {
+      if (quantity <= item.quantity) {
+        removeFromCart(lineKey)
+        return
+      }
+
+      if (!hasEnoughStock(item.product, item.addons, 1)) {
+        alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
+        return
+      }
+
+      cart.value.push({
+        lineKey: buildBundleLineKey(item.product.id, item.addons),
+        product: item.product,
+        quantity: 1,
+        addons: item.addons,
+      })
+      return
+    }
+
     if (quantity <= 0) {
       removeFromCart(lineKey)
       return
@@ -243,15 +280,17 @@ const requiresImmediatePayment = computed(() => isWalkInCustomer(selectedCustome
   }
 
   function getTransactionPayload() {
+    const items = cart.value.map((item) => ({
+      product_id: item.product.id,
+      quantity: item.quantity,
+      unit_price: item.product.price,
+      addons: cartAddonsToInput(item.addons),
+    }))
+
     return {
       customer_id: selectedCustomerId.value,
       notes: notes.value || null,
-      items: cart.value.map((item) => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.product.price,
-        addons: cartAddonsToInput(item.addons),
-      })),
+      items: expandItemsForSubmit(items),
     }
   }
 

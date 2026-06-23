@@ -1,8 +1,12 @@
-import type { Product, TransactionItemAddonInput, TransactionItemWithProduct } from '@/types/database'
+import type { Product, TransactionItemAddonInput, TransactionItemInput, TransactionItemWithProduct } from '@/types/database'
 
 export type CartAddonSelection = {
   product: Product
   quantity: number
+}
+
+export function hasBundleAddons(addons: CartAddonSelection[] | TransactionItemAddonInput[] | undefined) {
+  return (addons?.length ?? 0) > 0
 }
 
 export function getAddonSignature(addons: { addon_product_id: string, quantity: number }[]) {
@@ -20,6 +24,25 @@ export function buildCartLineKey(productId: string, addons: CartAddonSelection[]
       quantity: addon.quantity,
     })),
   )}`
+}
+
+export function buildBundleLineKey(productId: string, addons: CartAddonSelection[]) {
+  return `${buildCartLineKey(productId, addons)}::${crypto.randomUUID()}`
+}
+
+export function expandItemsForSubmit(items: TransactionItemInput[]): TransactionItemInput[] {
+  return items.flatMap((item) => {
+    if (!hasBundleAddons(item.addons) || item.quantity <= 1) {
+      return [item]
+    }
+
+    return Array.from({ length: item.quantity }, () => ({
+      product_id: item.product_id,
+      quantity: 1,
+      unit_price: item.unit_price,
+      addons: item.addons,
+    }))
+  })
 }
 
 export function getAddonSubtotalPerUnit(addons: TransactionItemAddonInput[]) {
@@ -44,12 +67,26 @@ export function cartAddonsToInput(addons: CartAddonSelection[]): TransactionItem
 
 export function formatItemWithAddons(item: TransactionItemWithProduct) {
   const menuName = item.products?.name ?? 'Produk'
-  const addonNames = (item.transaction_item_addons ?? [])
-    .map((addon) => addon.products?.name ?? 'Addon')
+  const addons = item.transaction_item_addons ?? []
+
+  if (!addons.length) {
+    return `${menuName} x${item.quantity}`
+  }
+
+  if (item.quantity <= 1) {
+    const addonNames = addons.map((addon) => addon.products?.name ?? 'Addon').join(', ')
+    return `${menuName} (+ ${addonNames})`
+  }
+
+  const addonNames = addons
+    .map((addon) => {
+      const name = addon.products?.name ?? 'Addon'
+      const totalQty = addon.quantity * item.quantity
+      return totalQty > 1 ? `${name} x${totalQty}` : name
+    })
     .join(', ')
 
-  const base = `${menuName} x${item.quantity}`
-  return addonNames ? `${base} (+ ${addonNames})` : base
+  return `${menuName} x${item.quantity} (+ ${addonNames})`
 }
 
 export const TRANSACTION_ITEMS_WITH_ADDONS_SELECT = `
@@ -92,10 +129,24 @@ export function formatPreOrderItemWithAddons(item: {
   pre_order_item_addons?: { quantity: number, products: { name: string } | null }[]
 }) {
   const menuName = item.products?.name ?? 'Produk'
-  const addonNames = (item.pre_order_item_addons ?? [])
-    .map((addon) => addon.products?.name ?? 'Addon')
+  const addons = item.pre_order_item_addons ?? []
+
+  if (!addons.length) {
+    return `${menuName} x${item.quantity}`
+  }
+
+  if (item.quantity <= 1) {
+    const addonNames = addons.map((addon) => addon.products?.name ?? 'Addon').join(', ')
+    return `${menuName} (+ ${addonNames})`
+  }
+
+  const addonNames = addons
+    .map((addon) => {
+      const name = addon.products?.name ?? 'Addon'
+      const totalQty = addon.quantity * item.quantity
+      return totalQty > 1 ? `${name} x${totalQty}` : name
+    })
     .join(', ')
 
-  const base = `${menuName} x${item.quantity}`
-  return addonNames ? `${base} (+ ${addonNames})` : base
+  return `${menuName} x${item.quantity} (+ ${addonNames})`
 }

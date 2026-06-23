@@ -26,6 +26,7 @@ import {
   buildCartLineKey,
   cartAddonsToInput,
   getLineSubtotal,
+  hasBundleAddons,
   type CartAddonSelection,
 } from '@/lib/addon'
 import { formatPrice } from '@/lib/format'
@@ -137,21 +138,38 @@ function resetForm() {
   }
 
   notes.value = props.transaction.notes ?? ''
-  items.value = props.transaction.transaction_items.map((item) => ({
-    id: item.id,
-    product_id: item.product_id ?? item.products?.id ?? '',
-    name: item.products?.name ?? 'Produk',
-    quantity: item.quantity,
-    unit_price: Number(item.unit_price),
-    isNew: false,
-    addons: (item.transaction_item_addons ?? [])
+  items.value = props.transaction.transaction_items.flatMap((item) => {
+    const addons = (item.transaction_item_addons ?? [])
       .map((addon) => {
         const product = products.value.find((entry) => entry.id === addon.addon_product_id)
         if (!product) return null
         return { product, quantity: addon.quantity }
       })
-      .filter((addon): addon is CartAddonSelection => addon !== null),
-  }))
+      .filter((addon): addon is CartAddonSelection => addon !== null)
+
+    const base = {
+      product_id: item.product_id ?? item.products?.id ?? '',
+      name: item.products?.name ?? 'Produk',
+      unit_price: Number(item.unit_price),
+      addons,
+    }
+
+    if (!hasBundleAddons(addons) || item.quantity <= 1) {
+      return [{
+        id: item.id,
+        ...base,
+        quantity: item.quantity,
+        isNew: false,
+      }]
+    }
+
+    return Array.from({ length: item.quantity }, (_, index) => ({
+      id: index === 0 ? item.id : `new-${crypto.randomUUID()}`,
+      ...base,
+      quantity: 1,
+      isNew: index > 0,
+    }))
+  })
 }
 
 watch(
@@ -164,6 +182,26 @@ watch(
 )
 
 function addItem(product: Product, quantity: number, addons: CartAddonSelection[] = []) {
+  if (hasBundleAddons(addons)) {
+    for (let i = 0; i < quantity; i++) {
+      if (!hasEnoughStock(product, addons, 1)) {
+        alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
+        return
+      }
+
+      items.value.push({
+        id: `new-${crypto.randomUUID()}`,
+        product_id: product.id,
+        name: product.name,
+        quantity: 1,
+        unit_price: product.price,
+        isNew: true,
+        addons,
+      })
+    }
+    return
+  }
+
   const lineKey = buildCartLineKey(product.id, addons)
   const existing = items.value.find((entry) => getItemLineKey(entry) === lineKey)
 
@@ -233,8 +271,32 @@ function updateQuantity(itemId: string, quantity: number) {
   const item = items.value.find((entry) => entry.id === itemId)
   if (!item) return
 
-  const nextQuantity = Math.max(1, Math.floor(quantity) || 1)
   const product = products.value.find((entry) => entry.id === item.product_id)
+
+  if (hasBundleAddons(item.addons)) {
+    if (quantity <= item.quantity) {
+      removeItem(itemId)
+      return
+    }
+
+    if (product && !hasEnoughStock(product, item.addons, 1)) {
+      alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
+      return
+    }
+
+    items.value.push({
+      id: `new-${crypto.randomUUID()}`,
+      product_id: item.product_id,
+      name: item.name,
+      quantity: 1,
+      unit_price: item.unit_price,
+      isNew: true,
+      addons: item.addons,
+    })
+    return
+  }
+
+  const nextQuantity = Math.max(1, Math.floor(quantity) || 1)
 
   if (product && !hasEnoughStock(product, item.addons, nextQuantity)) {
     alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
@@ -333,16 +395,27 @@ async function handleSave() {
                     v-if="item.isNew"
                     class="ml-1 text-xs font-normal text-primary"
                   >(baru)</span>
+                  <span v-if="!hasBundleAddons(item.addons)" class="text-muted-foreground">
+                    x{{ item.quantity }}
+                  </span>
                 </p>
                 <p class="text-sm text-muted-foreground">
-                  {{ formatPrice(item.unit_price) }} / item
+                  {{ formatPrice(item.unit_price) }}
+                  <span v-if="!hasBundleAddons(item.addons)"> / item</span>
                 </p>
-                <p
+                <ul
                   v-if="item.addons.length"
-                  class="mt-1 text-xs text-muted-foreground"
+                  class="mt-1 space-y-0.5 text-xs text-muted-foreground"
                 >
-                  + {{ item.addons.map((addon) => addon.product.name).join(', ') }}
-                </p>
+                  <li
+                    v-for="addon in item.addons"
+                    :key="addon.product.id"
+                  >
+                    + {{ addon.product.name }}
+                    <span v-if="addon.quantity > 1">x{{ addon.quantity }}</span>
+                    ({{ formatPrice(addon.product.price * addon.quantity) }})
+                  </li>
+                </ul>
               </div>
               <Button
                 size="icon-sm"
@@ -364,12 +437,19 @@ async function handleSave() {
                   <Minus class="size-4" />
                 </Button>
                 <Input
+                  v-if="!hasBundleAddons(item.addons)"
                   :model-value="item.quantity"
                   type="number"
                   min="1"
                   class="w-16 text-center"
                   @update:model-value="updateQuantity(item.id, Number($event))"
                 />
+                <span
+                  v-else
+                  class="min-w-6 text-center text-sm font-medium tabular-nums"
+                >
+                  1
+                </span>
                 <Button
                   size="icon-sm"
                   variant="outline"

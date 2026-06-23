@@ -1,8 +1,11 @@
 import { computed, onMounted, ref } from 'vue'
 import {
+  buildBundleLineKey,
   buildCartLineKey,
   cartAddonsToInput,
+  expandItemsForSubmit,
   getLineSubtotal,
+  hasBundleAddons,
   type CartAddonSelection,
 } from '@/lib/addon'
 import { formatPrice } from '@/lib/format'
@@ -131,6 +134,23 @@ export function usePreOrderCart() {
   }
 
   function addToCart(product: Product, quantity = 1, addons: CartAddonSelection[] = []) {
+    if (hasBundleAddons(addons)) {
+      for (let i = 0; i < quantity; i++) {
+        if (!hasEnoughStock(product, addons, 1)) {
+          alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
+          return
+        }
+
+        cart.value.push({
+          lineKey: buildBundleLineKey(product.id, addons),
+          product,
+          quantity: 1,
+          addons,
+        })
+      }
+      return
+    }
+
     const lineKey = buildCartLineKey(product.id, addons)
     const existing = getCartItem(lineKey)
 
@@ -182,6 +202,26 @@ export function usePreOrderCart() {
   function updateQuantity(lineKey: string, quantity: number) {
     const item = getCartItem(lineKey)
     if (!item) return
+
+    if (hasBundleAddons(item.addons)) {
+      if (quantity <= item.quantity) {
+        removeFromCart(lineKey)
+        return
+      }
+
+      if (!hasEnoughStock(item.product, item.addons, 1)) {
+        alertStore.showAlert('Stok tidak cukup', 'Stok menu atau addon tidak mencukupi', 'error')
+        return
+      }
+
+      cart.value.push({
+        lineKey: buildBundleLineKey(item.product.id, item.addons),
+        product: item.product,
+        quantity: 1,
+        addons: item.addons,
+      })
+      return
+    }
 
     if (quantity <= 0) {
       removeFromCart(lineKey)
@@ -261,12 +301,12 @@ export function usePreOrderCart() {
       table_number: tableNumber.value.trim() || null,
       notes: notes.value.trim() || null,
       payment_choice: 'pay_later',
-      items: cart.value.map((item) => ({
+      items: expandItemsForSubmit(cart.value.map((item) => ({
         product_id: item.product.id,
         quantity: item.quantity,
         unit_price: item.product.price,
         addons: cartAddonsToInput(item.addons),
-      })),
+      }))),
     })
 
     isSubmitting.value = false

@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { transactionItemsUpdateSchema, transactionSchema } from '@/schema/schema'
 import {
+  expandItemsForSubmit,
   getAddonSignature,
   getLineSubtotal,
   TRANSACTION_ITEMS_WITH_ADDONS_SELECT,
@@ -41,6 +42,26 @@ function buildLineKeyFromDbItem(item: TransactionItemWithProduct) {
   }))
 
   return buildLineKey(item.product_id, addons)
+}
+
+function itemHasAddons(
+  item: { addons?: TransactionItemInput['addons'] } | TransactionItemWithProduct,
+) {
+  if ('addons' in item && item.addons?.length) {
+    return true
+  }
+
+  const dbItem = item as TransactionItemWithProduct
+  return (dbItem.transaction_item_addons?.length ?? 0) > 0
+}
+
+function canMergeTransactionItems(
+  newItem: TransactionItemInput,
+  existingItem?: TransactionItemWithProduct,
+) {
+  if (itemHasAddons(newItem)) return false
+  if (existingItem && itemHasAddons(existingItem)) return false
+  return !!existingItem
 }
 
 async function insertTransactionItemAddons(
@@ -173,7 +194,7 @@ async function mergeIntoTransaction(
     const lineKey = buildLineKeyFromInput(newItem)
     const existingItem = itemsByLineKey.get(lineKey)
 
-    if (existingItem) {
+    if (existingItem && canMergeTransactionItems(newItem, existingItem)) {
       const quantity = existingItem.quantity + newItem.quantity
       const subtotal = quantity * newItem.unit_price
 
@@ -478,7 +499,16 @@ export const updateTransactionItems = async (
     validated.data.items.flatMap((item) => (item.id ? [item.id] : [])),
   )
   const existingUpdates = validated.data.items.filter((item) => item.id)
-  const newItems = validated.data.items.filter((item) => !item.id)
+  const newItems = expandItemsForSubmit(
+    validated.data.items
+      .filter((item) => !item.id)
+      .map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price ?? 0,
+        addons: item.addons,
+      })),
+  )
 
   for (const currentItem of currentItems) {
     if (updatedIds.has(currentItem.id)) continue
@@ -593,7 +623,10 @@ export const updateTransactionItems = async (
       })
       const existingItem = itemsByLineKey.get(lineKey)
 
-      if (existingItem) {
+      if (existingItem && canMergeTransactionItems(
+        { product_id: newItem.product_id, quantity: newItem.quantity, unit_price: unitPrice, addons: newItem.addons },
+        existingItem as TransactionItemWithProduct,
+      )) {
         const quantity = existingItem.quantity + newItem.quantity
         const subtotal = quantity * unitPrice
 
@@ -707,6 +740,7 @@ export const createTransaction = async (
   }
 
   const payload = validated.data as z.infer<typeof transactionSchema>
+  const items = expandItemsForSubmit(payload.items)
   const payImmediately = !!options?.paymentMethod
 
   if (!payImmediately) {
@@ -729,13 +763,13 @@ export const createTransaction = async (
       return mergeIntoTransaction(
         pendingTransaction.id,
         (pendingTransaction.transaction_items ?? []) as TransactionItemWithProduct[],
-        payload.items,
+        items,
         payload.notes,
       )
     }
   }
 
-  const totalAmount = payload.items.reduce(
+  const totalAmount = items.reduce(
     (sum, item) => sum + getLineSubtotal(item.quantity, item.unit_price, item.addons),
     0,
   )
@@ -759,7 +793,7 @@ export const createTransaction = async (
     return { transaction: null, merged: false, error: transactionError }
   }
 
-  for (const item of payload.items) {
+  for (const item of items) {
     const { data: insertedItem, error: insertError } = await supabaseClient
       .from('transaction_items')
       .insert({
@@ -790,7 +824,7 @@ export const createTransaction = async (
     }
   }
 
-  const { error: stockError } = await recordSaleStock(payload.items, transaction.id)
+  const { error: stockError } = await recordSaleStock(items, transaction.id)
   if (stockError) {
     await supabaseClient.from('transaction_items').delete().eq('transaction_id', transaction.id)
     await supabaseClient.from('transactions').delete().eq('id', transaction.id)

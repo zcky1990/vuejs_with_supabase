@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { formatPrice } from '@/lib/format'
+import { hasBundleAddons } from '@/lib/addon'
 import type { PreOrderCartItem } from '@/composables/usePreOrderCart'
 
 defineProps<{
@@ -82,7 +83,9 @@ const emit = defineEmits<{
               <div class="flex items-start justify-between gap-2">
                 <p class="text-sm font-medium leading-snug">
                   {{ item.product.name }}
-                  <span class="text-muted-foreground">x{{ item.quantity }}</span>
+                  <span v-if="!hasBundleAddons(item.addons)" class="text-muted-foreground">
+                    x{{ item.quantity }}
+                  </span>
                 </p>
                 <Button
                   size="icon-sm"
@@ -116,7 +119,7 @@ const emit = defineEmits<{
                     <Minus class="size-3" />
                   </Button>
                   <span class="min-w-5 text-center text-xs font-medium tabular-nums">
-                    {{ item.quantity }}
+                    {{ hasBundleAddons(item.addons) ? 1 : item.quantity }}
                   </span>
                   <Button
                     size="icon-sm"

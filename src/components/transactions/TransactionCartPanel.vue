@@ -3,6 +3,7 @@ import { Banknote, ClipboardList, Minus, Plus, ShoppingCart, Trash2 } from '@luc
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatPrice } from '@/lib/format'
+import { hasBundleAddons } from '@/lib/addon'
 import type { CartItem } from '@/composables/useTransactionCart'
 
 defineProps<{
@@ -42,19 +43,31 @@ const emit = defineEmits<{
           class="rounded-xl border px-4 py-3"
         >
           <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="font-medium">{{ item.product.name }}</p>
-              <p class="text-sm text-muted-foreground">
-                {{ formatPrice(item.product.price) }} / item
-              </p>
-              <p
-                v-if="item.addons.length"
-                class="mt-1 text-xs text-muted-foreground"
-              >
-                + {{ item.addons.map((addon) => addon.product.name).join(', ') }}
-                ({{ formatPrice(item.addons.reduce((sum, addon) => sum + addon.product.price * addon.quantity, 0)) }})
-              </p>
-            </div>
+              <div>
+                <p class="font-medium">
+                  {{ item.product.name }}
+                  <span v-if="!hasBundleAddons(item.addons)" class="text-muted-foreground">
+                    x{{ item.quantity }}
+                  </span>
+                </p>
+                <p class="text-sm text-muted-foreground">
+                  {{ formatPrice(item.product.price) }}
+                  <span v-if="!hasBundleAddons(item.addons)"> / item</span>
+                </p>
+                <ul
+                  v-if="item.addons.length"
+                  class="mt-1 space-y-0.5 text-xs text-muted-foreground"
+                >
+                  <li
+                    v-for="addon in item.addons"
+                    :key="addon.product.id"
+                  >
+                    + {{ addon.product.name }}
+                    <span v-if="addon.quantity > 1">x{{ addon.quantity }}</span>
+                    ({{ formatPrice(addon.product.price * addon.quantity) }})
+                  </li>
+                </ul>
+              </div>
             <Button
               size="icon-sm"
               variant="ghost"
@@ -74,6 +87,7 @@ const emit = defineEmits<{
                 <Minus class="size-4" />
               </Button>
               <Input
+                v-if="!hasBundleAddons(item.addons)"
                 :model-value="item.quantity"
                 type="number"
                 min="1"
@@ -81,6 +95,12 @@ const emit = defineEmits<{
                 class="w-16 text-center"
                 @update:model-value="emit('updateQuantity', item.lineKey, Number($event))"
               />
+              <span
+                v-else
+                class="min-w-6 text-center text-sm font-medium tabular-nums"
+              >
+                1
+              </span>
               <Button
                 size="icon-sm"
                 variant="outline"
