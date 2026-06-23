@@ -63,6 +63,7 @@ export type Transaction = {
   is_paid: boolean
   payment_method: PaymentMethod | null
   paid_at: string | null
+  shift_id: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -360,4 +361,37 @@ export type DailyAnalyticsRow = {
   cogs: number
   grossProfit: number
   transactionCount: number
+}
+
+export type CashierShiftStatus = 'open' | 'closed'
+
+export type CashierShift = {
+  id: string
+  cashier_id: string
+  shift_date: string
+  opened_at: string
+  closed_at: string | null
+  opening_balance: number
+  total_sales: number | null
+  cash_sales: number | null
+  qris_sales: number | null
+  transfer_sales: number | null
+  transaction_count: number | null
+  closing_balance_expected: number | null
+  closing_balance_actual: number | null
+  cash_variance: number | null
+  notes: string | null
+  status: CashierShiftStatus
+  created_at: string
+  updated_at: string
+}
+
+export type ShiftLiveTotals = {
+  transactionCount: number
+  totalSales: number
+  cashSales: number
+  qrisSales: number
+  transferSales: number
+  expectedCashInDrawer: number
+  payments: PaymentBreakdownRow[]
 }

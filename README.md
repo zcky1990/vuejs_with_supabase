@@ -40,6 +40,7 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 | **Layar antrian (`/queue/display`)** | Tampilan fullscreen untuk TV dapur (publik, tanpa login) |
 | **Restock** | Tambah stok per batch dengan harga beli & riwayat |
 | **Analisis** | Pendapatan, HPP FIFO, laba kotor, chart, ranking produk |
+| **Shift kasir (`/shifts`)** | Buka/tutup shift, saldo awal, penjualan per shift, selisih kas |
 | **Konfigurasi** | Upload QRIS, data rekening transfer, info struk toko |
 | **Profil (`/profile`)** | Ubah nama, password, foto profil (WEBP), bahasa & tema |
 
@@ -282,7 +283,8 @@ Semua skema SQL ada di folder [`DDL/`](DDL/). Jalankan di **Supabase SQL Editor*
 | [`DDL/order_queues_table_number.ddl`](DDL/order_queues_table_number.ddl) | Jika `order_queues` dibuat **tanpa** `table_number` |
 | [`DDL/order_queues_realtime.ddl`](DDL/order_queues_realtime.ddl) | **Wajib** untuk antrian realtime di halaman `/queue` |
 | [`DDL/order_queues_daily_reset.ddl`](DDL/order_queues_daily_reset.ddl) | Reset nomor antrian per hari (timezone Asia/Jakarta) |
-| [`DDL/shop_config_invoice.ddl`](DDL/shop_config_invoice.ddl) | Kolom `shop_name`, `shop_address` untuk header struk |
+| [`DDL/pre_orders_confirmed_payment.ddl`](DDL/pre_orders_confirmed_payment.ddl) | Kolom `confirmed_payment_method` untuk konfirmasi bayar pre-order `pay_now` |
+| [`DDL/cashier_shifts.ddl`](DDL/cashier_shifts.ddl) | Tabel `cashier_shifts` + kolom `transactions.shift_id` untuk rekonsiliasi kas |
 | [`DDL/product_addons.ddl`](DDL/product_addons.ddl) | Kolom `is_addons`, mapping addon, addon per transaksi |
 | [`DDL/product_is_addons.ddl`](DDL/product_is_addons.ddl) | Migrasi `product_type` → `is_addons` jika DB sudah pakai kolom lama |
 | [`DDL/masterdata_policies.ddl`](DDL/masterdata_policies.ddl) | Jika insert/update produk/pelanggan mengembalikan **403** |
@@ -412,6 +414,7 @@ vue-superbase-project/
 | `/queue` | Kelola antrian dapur | Operasional |
 | `/stock/restock` | Restock | Operasional |
 | `/analytics` | Analisis keuntungan | Laporan |
+| `/shifts` | Shift kasir (buka/tutup, ringkasan harian) | Laporan |
 | `/master/products` | Master produk | Master Data |
 | `/master/categories` | Master kategori | Master Data |
 | `/master/customers` | Master pembeli | Master Data |

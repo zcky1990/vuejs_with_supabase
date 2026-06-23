@@ -9,6 +9,7 @@ import {
 } from './addon'
 import { createCustomer, getCustomers } from './customer'
 import { applyStockDelta, recordSaleStock, recordStockReturn } from './stock'
+import { resolveOpenShiftIdForCurrentUser } from './shift'
 import type {
   Customer,
   CreateTransactionOptions,
@@ -435,12 +436,14 @@ export const markTransactionAsPaid = async (
   paymentMethod: PaymentMethod,
 ) => {
   const supabaseClient = supabase()
+  const shiftId = await resolveOpenShiftIdForCurrentUser()
   const { data, error } = await supabaseClient
     .from('transactions')
     .update({
       is_paid: true,
       payment_method: paymentMethod,
       paid_at: new Date().toISOString(),
+      ...(shiftId ? { shift_id: shiftId } : {}),
     })
     .eq('id', transactionId)
     .select()
@@ -793,6 +796,7 @@ export const createTransaction = async (
   )
 
   const supabaseClient = supabase()
+  const shiftId = payImmediately ? await resolveOpenShiftIdForCurrentUser() : null
 
   const { data: transaction, error: transactionError } = await supabaseClient
     .from('transactions')
@@ -803,6 +807,7 @@ export const createTransaction = async (
       payment_method: payImmediately ? options!.paymentMethod! : null,
       paid_at: payImmediately ? new Date().toISOString() : null,
       notes: payload.notes ?? null,
+      ...(shiftId ? { shift_id: shiftId } : {}),
     })
     .select()
     .single()

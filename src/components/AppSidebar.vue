@@ -19,7 +19,7 @@ import { getCookie, clearAuthCookies } from '@/lib/cookies'
 import { getCurrentUser } from '@/lib/auth'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from '@/composables/useI18n'
-import { BarChart3, ClipboardList, Inbox, LayoutDashboard, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Tags, User, Users } from '@lucide/vue'
+import { BarChart3, ClipboardList, Inbox, LayoutDashboard, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Tags, User, Users, Wallet } from '@lucide/vue'
 
 const userEmail = getCookie('_user_email')
 const userAvatar = ref<string | null>(null)
@@ -177,6 +177,14 @@ onUnmounted(() => {
                 <RouterLink to="/analytics">
                   <BarChart3 />
                   <span>{{ t('nav.analytics') }}</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child>
+                <RouterLink to="/shifts">
+                  <Wallet />
+                  <span>{{ t('nav.shifts') }}</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

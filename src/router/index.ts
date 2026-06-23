@@ -15,6 +15,7 @@ import QueuePages from '@/pages/QueuePages.vue'
 import QueueDisplayPages from '@/pages/QueueDisplayPages.vue'
 import RestockPages from '@/pages/RestockPages.vue'
 import AnalyticsPages from '@/pages/AnalyticsPages.vue'
+import ShiftPages from '@/pages/ShiftPages.vue'
 import OrderPages from '@/pages/OrderPages.vue'
 import OrderSuccessPages from '@/pages/OrderSuccessPages.vue'
 import PreOrderInboxPages from '@/pages/PreOrderInboxPages.vue'
@@ -102,6 +103,11 @@ const router = createRouter({
       path: '/analytics',
       name: 'analytics',
       component: AnalyticsPages,
+    },
+    {
+      path: '/shifts',
+      name: 'shifts',
+      component: ShiftPages,
     },
     {
       path: '/config',
