@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import PaymentMethodDialog from '@/components/transactions/PaymentMethodDialog.vue'
+import PaymentSuccessDialog from '@/components/transactions/PaymentSuccessDialog.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,7 +17,9 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { formatPreOrderItemWithAddons } from '@/lib/addon'
 import { formatPrice } from '@/lib/format'
+import { buildInvoiceFromTransaction, type InvoiceData } from '@/lib/invoice'
 import { formatPreOrderNumber, getPreOrderPaymentLabel, processPreOrder } from '@/lib/pre-order'
+import { getTransactionById } from '@/lib/transaction'
 import { useAlertStore } from '@/stores/useAlertStore'
 import type { PaymentMethod, PreOrderWithDetails } from '@/types/database'
 
@@ -35,6 +38,8 @@ const addToQueue = ref(true)
 const tableNumber = ref('')
 const isSubmitting = ref(false)
 const paymentDialogOpen = ref(false)
+const paymentSuccessDialogOpen = ref(false)
+const paymentSuccessInvoice = ref<InvoiceData | null>(null)
 
 const items = computed(() => props.preOrder?.pre_order_items ?? [])
 
@@ -59,7 +64,7 @@ async function handlePayment(method: PaymentMethod) {
   if (!props.preOrder) return
 
   isSubmitting.value = true
-  const { error } = await processPreOrder(props.preOrder.id, {
+  const { transaction, queueNumber, error } = await processPreOrder(props.preOrder.id, {
     paymentMethod: method,
     addToQueue: addToQueue.value,
     tableNumber: tableNumber.value.trim() || null,
@@ -72,7 +77,26 @@ async function handlePayment(method: PaymentMethod) {
     return
   }
 
-  alertStore.showAlert('Berhasil', 'Pesanan berhasil diproses', 'success')
+  if (!transaction) {
+    alertStore.showAlert('Error', 'Transaksi tidak ditemukan', 'error')
+    return
+  }
+
+  const { transaction: transactionDetails, error: fetchError } = await getTransactionById(transaction.id)
+
+  if (fetchError || !transactionDetails) {
+    alertStore.showAlert('Error', fetchError?.message ?? 'Gagal memuat data transaksi', 'error')
+    emit('update:open', false)
+    emit('processed')
+    return
+  }
+
+  paymentSuccessInvoice.value = buildInvoiceFromTransaction(
+    transactionDetails,
+    method,
+    { queueNumber, paidAt: transaction.paid_at ?? new Date().toISOString() },
+  )
+  paymentSuccessDialogOpen.value = true
   emit('update:open', false)
   emit('processed')
 }
@@ -147,5 +171,10 @@ function handleProcessClick() {
     :transaction="null"
     :amount="preOrder?.total_amount ?? 0"
     @select="handlePayment"
+  />
+
+  <PaymentSuccessDialog
+    v-model:open="paymentSuccessDialogOpen"
+    :invoice="paymentSuccessInvoice"
   />
 </template>

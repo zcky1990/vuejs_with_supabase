@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ImageIcon, Landmark, QrCode, Trash2, Upload } from '@lucide/vue'
+import { ImageIcon, Landmark, Printer, QrCode, Trash2, Upload } from '@lucide/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +19,7 @@ import type { ShopConfig } from '@/types/database'
 const alertStore = useAlertStore()
 const isLoading = ref(true)
 const isSavingTransfer = ref(false)
+const isSavingReceipt = ref(false)
 const isUploadingQris = ref(false)
 const isRemovingQris = ref(false)
 const qrisPreview = ref<string | null>(null)
@@ -29,12 +30,21 @@ const transferForm = ref({
   transfer_account_holder: '',
 })
 
+const receiptForm = ref({
+  shop_name: '',
+  shop_address: '',
+})
+
 function applyConfig(config: ShopConfig | null) {
   qrisPreview.value = config?.qris_image_url ?? null
   transferForm.value = {
     transfer_bank_name: config?.transfer_bank_name ?? '',
     transfer_account_number: config?.transfer_account_number ?? '',
     transfer_account_holder: config?.transfer_account_holder ?? '',
+  }
+  receiptForm.value = {
+    shop_name: config?.shop_name ?? '',
+    shop_address: config?.shop_address ?? '',
   }
 }
 
@@ -116,6 +126,25 @@ async function handleSaveTransfer() {
   alertStore.showAlert('Berhasil', 'Data rekening transfer disimpan', 'success')
 }
 
+async function handleSaveReceipt() {
+  isSavingReceipt.value = true
+  const { error } = await updateShopConfig({
+    shop_name: receiptForm.value.shop_name.trim() || null,
+    shop_address: receiptForm.value.shop_address.trim() || null,
+  })
+  isSavingReceipt.value = false
+
+  if (error) {
+    const message = typeof error === 'object' && 'message' in error
+      ? String(error.message)
+      : 'Gagal menyimpan info struk'
+    alertStore.showAlert('Error', message, 'error')
+    return
+  }
+
+  alertStore.showAlert('Berhasil', 'Info struk disimpan', 'success')
+}
+
 onMounted(loadConfig)
 </script>
 
@@ -134,6 +163,45 @@ onMounted(loadConfig)
       </div>
 
       <div v-else class="grid gap-6 lg:grid-cols-2">
+        <Card class="lg:col-span-2">
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
+                <Printer class="size-5" />
+              </div>
+              <div>
+                <CardTitle>Info Struk</CardTitle>
+                <CardDescription>Nama dan alamat toko yang dicetak di invoice thermal.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form class="max-w-xl" @submit.prevent="handleSaveReceipt">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel for="shop-name">Nama Toko</FieldLabel>
+                  <Input
+                    id="shop-name"
+                    v-model="receiptForm.shop_name"
+                    placeholder="Contoh: Warung Zavi"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel for="shop-address">Alamat (opsional)</FieldLabel>
+                  <Input
+                    id="shop-address"
+                    v-model="receiptForm.shop_address"
+                    placeholder="Contoh: Jl. Contoh No. 1"
+                  />
+                </Field>
+              </FieldGroup>
+              <Button type="submit" class="mt-6" :disabled="isSavingReceipt">
+                {{ isSavingReceipt ? 'Menyimpan...' : 'Simpan Info Struk' }}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div class="flex items-center gap-3">

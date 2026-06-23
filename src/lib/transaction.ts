@@ -339,6 +339,23 @@ export const getTransactions = async () => {
   return { transactions: data as TransactionWithDetails[] | null, error }
 }
 
+export const getTransactionById = async (transactionId: string) => {
+  const supabaseClient = supabase()
+  const { data, error } = await supabaseClient
+    .from('transactions')
+    .select(`
+      *,
+      customers ( id, name ),
+      transaction_items (
+        ${TRANSACTION_ITEMS_WITH_ADDONS_SELECT}
+      )
+    `)
+    .eq('id', transactionId)
+    .single()
+
+  return { transaction: data as TransactionWithDetails | null, error }
+}
+
 export const getCustomerTransactionSummary = async (customerId: string, customerName: string) => {
   const supabaseClient = supabase()
   const { data, error } = await supabaseClient

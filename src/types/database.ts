@@ -154,6 +154,8 @@ export type CustomerTransactionSummary = {
 
 export type ShopConfig = {
   id: string
+  shop_name: string | null
+  shop_address: string | null
   qris_image_url: string | null
   transfer_bank_name: string | null
   transfer_account_number: string | null
@@ -163,6 +165,8 @@ export type ShopConfig = {
 }
 
 export type ShopConfigInput = {
+  shop_name?: string | null
+  shop_address?: string | null
   qris_image_url?: string | null
   transfer_bank_name?: string | null
   transfer_account_number?: string | null

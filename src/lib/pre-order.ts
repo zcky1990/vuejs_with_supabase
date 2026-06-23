@@ -244,11 +244,11 @@ export const processPreOrder = async (preOrderId: string, options: ProcessPreOrd
     .single()
 
   if (fetchError || !preOrder) {
-    return { preOrder: null, transaction: null, error: fetchError ?? { message: 'Pesanan tidak ditemukan' } }
+    return { preOrder: null, transaction: null, queueNumber: null, error: fetchError ?? { message: 'Pesanan tidak ditemukan' } }
   }
 
   if (preOrder.status !== 'pending') {
-    return { preOrder: null, transaction: null, error: { message: 'Pesanan sudah diproses atau dibatalkan' } }
+    return { preOrder: null, transaction: null, queueNumber: null, error: { message: 'Pesanan sudah diproses atau dibatalkan' } }
   }
 
   const { error: lockError } = await supabaseClient
@@ -258,7 +258,7 @@ export const processPreOrder = async (preOrderId: string, options: ProcessPreOrd
     .eq('status', 'pending')
 
   if (lockError) {
-    return { preOrder: null, transaction: null, error: lockError }
+    return { preOrder: null, transaction: null, queueNumber: null, error: lockError }
   }
 
   const items = (preOrder as PreOrderWithDetails).pre_order_items.map((item) => ({
@@ -280,19 +280,19 @@ export const processPreOrder = async (preOrderId: string, options: ProcessPreOrd
 
   if (stockError) {
     await supabaseClient.from('pre_orders').update({ status: 'pending' }).eq('id', preOrderId)
-    return { preOrder: null, transaction: null, error: stockError }
+    return { preOrder: null, transaction: null, queueNumber: null, error: stockError }
   }
 
   const stockCheck = validateStock(items, stockById)
   if (!stockCheck.ok) {
     await supabaseClient.from('pre_orders').update({ status: 'pending' }).eq('id', preOrderId)
-    return { preOrder: null, transaction: null, error: { message: stockCheck.message! } }
+    return { preOrder: null, transaction: null, queueNumber: null, error: { message: stockCheck.message! } }
   }
 
   const walkInCustomer = await getWalkInCustomer()
   if (!walkInCustomer) {
     await supabaseClient.from('pre_orders').update({ status: 'pending' }).eq('id', preOrderId)
-    return { preOrder: null, transaction: null, error: { message: 'Pelanggan walk-in tidak ditemukan' } }
+    return { preOrder: null, transaction: null, queueNumber: null, error: { message: 'Pelanggan walk-in tidak ditemukan' } }
   }
 
   const { transaction, error: transactionError } = await createTransaction(
@@ -306,11 +306,11 @@ export const processPreOrder = async (preOrderId: string, options: ProcessPreOrd
 
   if (transactionError || !transaction) {
     await supabaseClient.from('pre_orders').update({ status: 'pending' }).eq('id', preOrderId)
-    return { preOrder: null, transaction: null, error: transactionError }
+    return { preOrder: null, transaction: null, queueNumber: null, error: transactionError }
   }
 
   if (options.addToQueue) {
-    const { error: queueError } = await createQueueEntry(transaction.id, {
+    const { queue, error: queueError } = await createQueueEntry(transaction.id, {
       tableNumber: options.tableNumber ?? preOrder.table_number,
     })
 
@@ -319,8 +319,34 @@ export const processPreOrder = async (preOrderId: string, options: ProcessPreOrd
       return {
         preOrder: null,
         transaction: null,
+        queueNumber: null,
         error: { message: `Transaksi dibuat, tetapi antrian gagal: ${queueError.message}` },
       }
+    }
+
+    const paymentStatus: PreOrderPaymentStatus =
+      preOrder.payment_choice === 'pay_now' ? 'confirmed' : 'confirmed'
+
+    const { data: completedOrder, error: completeError } = await supabaseClient
+      .from('pre_orders')
+      .update({
+        status: 'completed',
+        transaction_id: transaction.id,
+        payment_status: paymentStatus,
+      })
+      .eq('id', preOrderId)
+      .select()
+      .single()
+
+    if (completeError) {
+      return { preOrder: null, transaction, queueNumber: queue?.queue_number ?? null, error: completeError }
+    }
+
+    return {
+      preOrder: completedOrder as PreOrder,
+      transaction,
+      queueNumber: queue?.queue_number ?? null,
+      error: null,
     }
   }
 
@@ -339,12 +365,13 @@ export const processPreOrder = async (preOrderId: string, options: ProcessPreOrd
     .single()
 
   if (completeError) {
-    return { preOrder: null, transaction, error: completeError }
+    return { preOrder: null, transaction, queueNumber: null, error: completeError }
   }
 
   return {
     preOrder: completedOrder as PreOrder,
     transaction,
+    queueNumber: null,
     error: null,
   }
 }

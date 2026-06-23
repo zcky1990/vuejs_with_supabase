@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Banknote, Pencil, Receipt } from '@lucide/vue'
+import { Banknote, Pencil } from '@lucide/vue'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { formatItemWithAddons } from '@/lib/addon'
 import { formatPrice } from '@/lib/format'
 import PaymentMethodDialog from '@/components/transactions/PaymentMethodDialog.vue'
+import PaymentSuccessDialog from '@/components/transactions/PaymentSuccessDialog.vue'
 import TransactionEditDialog from '@/components/transactions/TransactionEditDialog.vue'
+import { buildInvoiceFromTransaction, type InvoiceData } from '@/lib/invoice'
 import { markTransactionAsPaid } from '@/lib/transaction'
 import { useAlertStore } from '@/stores/useAlertStore'
 import type { CustomerTransactionSummary, PaymentMethod, TransactionWithDetails } from '@/types/database'
@@ -26,6 +31,8 @@ const emit = defineEmits<{
 
 const alertStore = useAlertStore()
 const paymentDialogOpen = ref(false)
+const paymentSuccessDialogOpen = ref(false)
+const paymentSuccessInvoice = ref<InvoiceData | null>(null)
 const editDialogOpen = ref(false)
 const selectedTransaction = ref<TransactionWithDetails | null>(null)
 const isPaying = ref(false)
@@ -41,9 +48,10 @@ const totalOutstanding = computed(() =>
 )
 
 function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
+  return new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   }).format(new Date(value))
 }
 
@@ -66,8 +74,9 @@ function openEditDialog(transaction: TransactionWithDetails) {
 async function handlePayment(method: PaymentMethod) {
   if (!selectedTransaction.value) return
 
+  const transactionSnapshot = selectedTransaction.value
   isPaying.value = true
-  const { error } = await markTransactionAsPaid(selectedTransaction.value.id, method)
+  const { transaction, error } = await markTransactionAsPaid(transactionSnapshot.id, method)
   isPaying.value = false
   paymentDialogOpen.value = false
 
@@ -76,8 +85,18 @@ async function handlePayment(method: PaymentMethod) {
     return
   }
 
-  const methodLabel = method === 'qris' ? 'QRIS' : method === 'cash' ? 'Cash' : 'Transfer'
-  alertStore.showAlert('Berhasil', `Pembayaran ${methodLabel} berhasil dicatat`, 'success')
+  const paidAt = transaction?.paid_at ?? new Date().toISOString()
+  paymentSuccessInvoice.value = buildInvoiceFromTransaction(
+    {
+      ...transactionSnapshot,
+      is_paid: true,
+      payment_method: method,
+      paid_at: paidAt,
+    },
+    method,
+    { paidAt },
+  )
+  paymentSuccessDialogOpen.value = true
   emit('refresh')
 }
 
@@ -88,85 +107,80 @@ function handleSaved() {
 
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-[560px]">
-      <div class="border-b px-6 pb-5 pt-8 text-center">
-        <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-foreground text-background">
-          <Receipt class="size-7" />
-        </div>
-        <h2 class="text-3xl font-bold tracking-tight uppercase">
-          {{ customer?.customerName }}
-        </h2>
-        <p class="mt-1 text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
-          Profil Hutang Aktif
-        </p>
-      </div>
+    <DialogContent class="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[520px]">
+      <DialogHeader class="border-b px-6 pt-6 pb-4">
+        <DialogTitle class="text-xl">
+          Hutang — {{ customer?.customerName }}
+        </DialogTitle>
+        <DialogDescription>
+          Transaksi belum dibayar untuk pembeli ini.
+        </DialogDescription>
+      </DialogHeader>
 
-      <div class="max-h-[50vh] overflow-y-auto px-6 py-5">
-        <p class="mb-4 text-xs font-semibold tracking-[0.15em] text-muted-foreground uppercase">
-          Catatan Per Transaksi
-        </p>
-
-        <div v-if="!unpaidTransactions.length" class="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+      <div class="flex-1 overflow-y-auto px-6 py-4">
+        <div
+          v-if="!unpaidTransactions.length"
+          class="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground"
+        >
           Tidak ada hutang aktif untuk pembeli ini.
         </div>
 
         <div v-else class="space-y-3">
-          <div
+          <article
             v-for="transaction in unpaidTransactions"
             :key="transaction.id"
-            class="rounded-2xl border bg-background px-4 py-4"
+            class="rounded-lg border p-4"
           >
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start justify-between gap-3">
               <div class="min-w-0 flex-1">
-                <p class="text-lg font-semibold">{{ formatShortDate(transaction.created_at) }}</p>
-                <p class="mt-1 text-sm text-muted-foreground">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-semibold">{{ formatShortDate(transaction.created_at) }}</p>
+                  <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                    Belum bayar
+                  </span>
+                </div>
+                <p class="mt-1.5 text-sm text-muted-foreground">
                   {{ formatItems(transaction) }}
                 </p>
               </div>
-
-              <div class="flex items-center gap-2">
-                <p class="text-right text-lg font-bold whitespace-nowrap">
-                  {{ formatPrice(transaction.total_amount) }}
-                </p>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  class="size-10 shrink-0 rounded-xl"
-                  @click="openEditDialog(transaction)"
-                >
-                  <Pencil class="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  class="size-10 shrink-0 rounded-xl"
-                  :disabled="isPaying"
-                  @click="openPaymentDialog(transaction)"
-                >
-                  <Banknote class="size-4" />
-                </Button>
-              </div>
+              <p class="shrink-0 text-base font-bold">
+                {{ formatPrice(transaction.total_amount) }}
+              </p>
             </div>
-          </div>
+
+            <div class="mt-3 flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                class="flex-1"
+                @click="openEditDialog(transaction)"
+              >
+                <Pencil class="size-3.5" />
+                Perbaiki
+              </Button>
+              <Button
+                size="sm"
+                class="flex-1"
+                :disabled="isPaying"
+                @click="openPaymentDialog(transaction)"
+              >
+                <Banknote class="size-3.5" />
+                Bayar
+              </Button>
+            </div>
+          </article>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4 border-t px-6 py-5">
-        <div>
-          <p class="text-xs font-semibold tracking-[0.15em] text-muted-foreground uppercase">
-            Jumlah Catatan
-          </p>
-          <p class="mt-1 text-2xl font-bold">
-            {{ unpaidTransactions.length }}
-            <span class="text-base font-medium text-muted-foreground">entri</span>
-          </p>
-        </div>
-        <div class="text-right">
-          <p class="text-xs font-semibold tracking-[0.15em] text-muted-foreground uppercase">
-            Total Hutang
-          </p>
-          <p class="mt-1 text-3xl font-bold tracking-tight">
-            {{ formatPrice(totalOutstanding) }}
-          </p>
+      <div v-if="unpaidTransactions.length" class="border-t bg-muted/30 px-6 py-4">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">
+            {{ unpaidTransactions.length }} transaksi belum lunas
+          </span>
+          <div class="text-right">
+            <p class="text-xs text-muted-foreground">Total hutang</p>
+            <p class="text-xl font-bold">{{ formatPrice(totalOutstanding) }}</p>
+          </div>
         </div>
       </div>
     </DialogContent>
@@ -176,6 +190,11 @@ function handleSaved() {
     v-model:open="paymentDialogOpen"
     :transaction="selectedTransaction"
     @select="handlePayment"
+  />
+
+  <PaymentSuccessDialog
+    v-model:open="paymentSuccessDialogOpen"
+    :invoice="paymentSuccessInvoice"
   />
 
   <TransactionEditDialog

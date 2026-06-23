@@ -102,6 +102,8 @@ export const transactionItemsUpdateSchema = z.object({
 export type TransactionItemsUpdateSchema = z.infer<typeof transactionItemsUpdateSchema>
 
 export const shopConfigSchema = z.object({
+  shop_name: z.string().nullable().optional(),
+  shop_address: z.string().nullable().optional(),
   transfer_bank_name: z.string().nullable().optional(),
   transfer_account_number: z.string().nullable().optional(),
   transfer_account_holder: z.string().nullable().optional(),

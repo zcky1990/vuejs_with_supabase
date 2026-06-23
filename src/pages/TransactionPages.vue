@@ -2,6 +2,7 @@
 import { Receipt } from '@lucide/vue'
 import AddonSelectDialog from '@/components/transactions/AddonSelectDialog.vue'
 import PaymentMethodDialog from '@/components/transactions/PaymentMethodDialog.vue'
+import PaymentSuccessDialog from '@/components/transactions/PaymentSuccessDialog.vue'
 import TableNumberDialog from '@/components/transactions/TableNumberDialog.vue'
 import TransactionCartPanel from '@/components/transactions/TransactionCartPanel.vue'
 import TransactionFormPanel from '@/components/transactions/TransactionFormPanel.vue'
@@ -29,6 +30,8 @@ const {
   pendingProductAddons,
   pendingBundleIndex,
   pendingBundleTotal,
+  paymentSuccessDialogOpen,
+  paymentSuccessInvoice,
   totalAmount,
   formatPrice,
   getCartLineSubtotal,
@@ -120,6 +123,11 @@ const {
         :bundle-index="pendingBundleIndex"
         :bundle-total="pendingBundleTotal"
         @confirm="handleAddonConfirm"
+      />
+
+      <PaymentSuccessDialog
+        v-model:open="paymentSuccessDialogOpen"
+        :invoice="paymentSuccessInvoice"
       />
     </div>
   </DashboardLayout>

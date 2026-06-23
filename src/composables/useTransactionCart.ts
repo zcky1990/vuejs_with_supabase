@@ -1,5 +1,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { buildBundleLineKey, buildCartLineKey, cartAddonsToInput, expandItemsForSubmit, getLineSubtotal, hasBundleAddons, type CartAddonSelection } from '@/lib/addon'
+import { buildInvoiceFromCart, type InvoiceData } from '@/lib/invoice'
 import { formatPrice, formatQueueNumber } from '@/lib/format'
 import { getProducts, getProductAddonsMap } from '@/lib/product'
 import { createQueueEntry } from '@/lib/queue'
@@ -38,6 +39,8 @@ export function useTransactionCart() {
   const pendingProduct = ref<Product | null>(null)
   const pendingBundleIndex = ref(1)
   const pendingBundleTotal = ref(1)
+  const paymentSuccessDialogOpen = ref(false)
+  const paymentSuccessInvoice = ref<InvoiceData | null>(null)
 
 const selectedCustomer = computed(() =>
   customers.value.find((customer) => customer.id === selectedCustomerId.value) ?? null,
@@ -423,6 +426,24 @@ const requiresImmediatePayment = computed(() => isWalkInCustomer(selectedCustome
     paymentDialogOpen.value = true
   }
 
+  function showPaymentSuccess(
+    method: PaymentMethod,
+    transaction: Transaction,
+    queueNumber: number | null,
+  ) {
+    paymentSuccessInvoice.value = buildInvoiceFromCart(
+      cart.value,
+      selectedCustomer.value ?? null,
+      transaction,
+      method,
+      {
+        queueNumber,
+        paidAt: transaction.paid_at ?? new Date().toISOString(),
+      },
+    )
+    paymentSuccessDialogOpen.value = true
+  }
+
   async function handlePayment(method: PaymentMethod) {
     isSubmitting.value = true
     const addToQueue = paymentWithQueue.value
@@ -439,35 +460,27 @@ const requiresImmediatePayment = computed(() => isWalkInCustomer(selectedCustome
       return
     }
 
-    if (addToQueue && transaction) {
-      const queue = await createQueueForTransaction(transaction.id, tableNumber)
+    if (!transaction) {
       isSubmitting.value = false
       paymentDialogOpen.value = false
       paymentWithQueue.value = false
       pendingTableNumber.value = null
-
-      if (!queue) {
-        resetForm()
-        await loadData()
-        return
-      }
-
-      const methodLabel = method === 'qris' ? 'QRIS' : method === 'cash' ? 'Cash' : 'Transfer'
-      alertStore.showAlert(
-        'Berhasil',
-        queueSuccessMessage(queue.queue_number, tableNumber, `Transaksi lunas (${methodLabel}) & antrian`),
-        'success',
-      )
-    } else {
-      isSubmitting.value = false
-      paymentDialogOpen.value = false
-      paymentWithQueue.value = false
-      pendingTableNumber.value = null
-
-      const methodLabel = method === 'qris' ? 'QRIS' : method === 'cash' ? 'Cash' : 'Transfer'
-      alertStore.showAlert('Berhasil', `Transaksi lunas (${methodLabel}) berhasil dibuat`, 'success')
+      return
     }
 
+    let queueNumber: number | null = null
+
+    if (addToQueue) {
+      const queue = await createQueueForTransaction(transaction.id, tableNumber)
+      queueNumber = queue?.queue_number ?? null
+    }
+
+    isSubmitting.value = false
+    paymentDialogOpen.value = false
+    paymentWithQueue.value = false
+    pendingTableNumber.value = null
+
+    showPaymentSuccess(method, transaction, queueNumber)
     resetForm()
     await loadData()
   }
@@ -495,6 +508,8 @@ const requiresImmediatePayment = computed(() => isWalkInCustomer(selectedCustome
     pendingProductAddons,
     pendingBundleIndex,
     pendingBundleTotal,
+    paymentSuccessDialogOpen,
+    paymentSuccessInvoice,
     totalAmount,
     formatPrice,
     getCartLineSubtotal,

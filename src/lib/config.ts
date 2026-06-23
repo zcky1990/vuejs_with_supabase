@@ -23,11 +23,25 @@ export const updateShopConfig = async (input: ShopConfigInput) => {
     return { config: null, error: validated.error.flatten().fieldErrors }
   }
 
-  const payload = {
-    transfer_bank_name: validated.data.transfer_bank_name?.trim() || null,
-    transfer_account_number: validated.data.transfer_account_number?.trim() || null,
-    transfer_account_holder: validated.data.transfer_account_holder?.trim() || null,
-    ...(input.qris_image_url !== undefined ? { qris_image_url: input.qris_image_url } : {}),
+  const payload: ShopConfigInput = {}
+
+  if (input.shop_name !== undefined) {
+    payload.shop_name = validated.data.shop_name?.trim() || null
+  }
+  if (input.shop_address !== undefined) {
+    payload.shop_address = validated.data.shop_address?.trim() || null
+  }
+  if (input.transfer_bank_name !== undefined) {
+    payload.transfer_bank_name = validated.data.transfer_bank_name?.trim() || null
+  }
+  if (input.transfer_account_number !== undefined) {
+    payload.transfer_account_number = validated.data.transfer_account_number?.trim() || null
+  }
+  if (input.transfer_account_holder !== undefined) {
+    payload.transfer_account_holder = validated.data.transfer_account_holder?.trim() || null
+  }
+  if (input.qris_image_url !== undefined) {
+    payload.qris_image_url = input.qris_image_url
   }
 
   const supabaseClient = supabase()

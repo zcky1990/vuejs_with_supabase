@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Eye, List, Pencil, Users } from '@lucide/vue'
+import { Banknote, Eye, List, Pencil, Users } from '@lucide/vue'
 import { RouterLink } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CustomerTransactionsDialog from '@/components/transactions/CustomerTransactionsDialog.vue'
+import PaymentMethodDialog from '@/components/transactions/PaymentMethodDialog.vue'
+import PaymentSuccessDialog from '@/components/transactions/PaymentSuccessDialog.vue'
 import TransactionDetailDialog from '@/components/transactions/TransactionDetailDialog.vue'
 import TransactionEditDialog from '@/components/transactions/TransactionEditDialog.vue'
 import { Button } from '@/components/ui/button'
@@ -15,10 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { getTransactions } from '@/lib/transaction'
+import { getTransactions, markTransactionAsPaid } from '@/lib/transaction'
+import { buildInvoiceFromTransaction, type InvoiceData } from '@/lib/invoice'
 import { formatPrice } from '@/lib/format'
 import { useAlertStore } from '@/stores/useAlertStore'
-import type { CustomerTransactionSummary, TransactionWithDetails } from '@/types/database'
+import type { CustomerTransactionSummary, PaymentMethod, TransactionWithDetails } from '@/types/database'
 
 type ViewMode = 'transaction' | 'customer'
 type PaymentFilter = 'all' | 'unpaid' | 'paid'
@@ -31,6 +34,10 @@ const isLoading = ref(true)
 const customerDialogOpen = ref(false)
 const detailDialogOpen = ref(false)
 const editDialogOpen = ref(false)
+const paymentDialogOpen = ref(false)
+const paymentSuccessDialogOpen = ref(false)
+const paymentSuccessInvoice = ref<InvoiceData | null>(null)
+const isPaying = ref(false)
 const selectedCustomer = ref<CustomerTransactionSummary | null>(null)
 const selectedTransaction = ref<TransactionWithDetails | null>(null)
 
@@ -113,6 +120,40 @@ function openTransactionDetail(transaction: TransactionWithDetails) {
 function openTransactionEdit(transaction: TransactionWithDetails) {
   selectedTransaction.value = transaction
   editDialogOpen.value = true
+}
+
+function openPaymentDialog(transaction: TransactionWithDetails) {
+  selectedTransaction.value = transaction
+  paymentDialogOpen.value = true
+}
+
+async function handlePayment(method: PaymentMethod) {
+  if (!selectedTransaction.value) return
+
+  const transactionSnapshot = selectedTransaction.value
+  isPaying.value = true
+  const { transaction, error } = await markTransactionAsPaid(transactionSnapshot.id, method)
+  isPaying.value = false
+  paymentDialogOpen.value = false
+
+  if (error) {
+    alertStore.showAlert('Error', error.message, 'error')
+    return
+  }
+
+  const paidAt = transaction?.paid_at ?? new Date().toISOString()
+  paymentSuccessInvoice.value = buildInvoiceFromTransaction(
+    {
+      ...transactionSnapshot,
+      is_paid: true,
+      payment_method: method,
+      paid_at: paidAt,
+    },
+    method,
+    { paidAt },
+  )
+  paymentSuccessDialogOpen.value = true
+  await loadTransactions()
 }
 
 function openEditFromDetail() {
@@ -255,13 +296,29 @@ onMounted(loadTransactions)
                 </TableCell>
                 <TableCell>{{ transaction.transaction_items.length }} item</TableCell>
                 <TableCell>
-                  {{ transaction.is_paid ? 'Lunas' : 'Belum bayar' }}
+                  <span
+                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+                    :class="transaction.is_paid
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'"
+                  >
+                    {{ transaction.is_paid ? 'Lunas' : 'Belum bayar' }}
+                  </span>
                 </TableCell>
                 <TableCell class="text-right font-medium">
                   {{ formatPrice(transaction.total_amount) }}
                 </TableCell>
                 <TableCell class="text-right">
                   <div class="flex justify-end gap-2">
+                    <Button
+                      v-if="!transaction.is_paid"
+                      size="sm"
+                      :disabled="isPaying"
+                      @click="openPaymentDialog(transaction)"
+                    >
+                      <Banknote class="size-4" />
+                      Bayar
+                    </Button>
                     <Button
                       v-if="!transaction.is_paid"
                       size="icon-sm"
@@ -331,6 +388,17 @@ onMounted(loadTransactions)
         v-model:open="editDialogOpen"
         :transaction="selectedTransaction"
         @saved="handleTransactionSaved"
+      />
+
+      <PaymentMethodDialog
+        v-model:open="paymentDialogOpen"
+        :transaction="selectedTransaction"
+        @select="handlePayment"
+      />
+
+      <PaymentSuccessDialog
+        v-model:open="paymentSuccessDialogOpen"
+        :invoice="paymentSuccessInvoice"
       />
     </div>
   </DashboardLayout>
