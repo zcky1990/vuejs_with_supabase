@@ -160,3 +160,19 @@ export function preOrderSubmitSchema() {
 }
 
 export type PreOrderSubmitSchema = z.infer<ReturnType<typeof preOrderSubmitSchema>>
+
+export function profileUpdateSchema() {
+  return z.object({
+    fullName: z.string().min(1, { message: t('validation.nameRequired') }),
+  })
+}
+
+export function passwordUpdateSchema() {
+  return z.object({
+    password: z.string().min(8, { message: t('validation.passwordMinLength') }),
+    confirmPassword: z.string().min(1, { message: t('validation.confirmPasswordRequired') }),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t('validation.passwordMismatch'),
+    path: ['confirmPassword'],
+  })
+}

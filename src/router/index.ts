@@ -17,6 +17,7 @@ import RestockPages from '@/pages/RestockPages.vue'
 import AnalyticsPages from '@/pages/AnalyticsPages.vue'
 import OrderPages from '@/pages/OrderPages.vue'
 import PreOrderInboxPages from '@/pages/PreOrderInboxPages.vue'
+import ProfilePages from '@/pages/ProfilePages.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +46,11 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfilePages,
     },
     {
       path: '/master/products',

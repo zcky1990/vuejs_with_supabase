@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { SidebarProps } from '@/components/ui/sidebar'
 import UserNav from '@/components/UserNav.vue'
 import {
@@ -16,14 +16,21 @@ import {
 } from '@/components/ui/sidebar'
 
 import { getCookie, clearAuthCookies } from '@/lib/cookies'
+import { getCurrentUser } from '@/lib/auth'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from '@/composables/useI18n'
 import { BarChart3, ClipboardList, Inbox, LayoutDashboard, List, LogOut, Package, PackagePlus, Receipt, Settings, Tags, User, Users } from '@lucide/vue'
 
 const userEmail = getCookie('_user_email')
+const userAvatar = ref<string | null>(null)
 const router = useRouter()
 const { t, locale } = useI18n()
 const props = defineProps<SidebarProps>()
+
+async function loadUserAvatar() {
+  const { user } = await getCurrentUser()
+  userAvatar.value = user?.avatarUrl ?? null
+}
 
 const data = computed(() => {
   locale.value
@@ -68,6 +75,15 @@ const data = computed(() => {
   ],
   }
 })
+
+onMounted(() => {
+  loadUserAvatar()
+  window.addEventListener('user-avatar-changed', loadUserAvatar)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('user-avatar-changed', loadUserAvatar)
+})
 </script>
 
 <template>
@@ -75,6 +91,7 @@ const data = computed(() => {
     <SidebarHeader>
       <UserNav
         :email="data.email"
+        :avatar-url="userAvatar"
         :menu="data.menu"
       />
     </SidebarHeader>

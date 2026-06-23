@@ -31,6 +31,7 @@ interface MenuGroup {
 
 interface MenuProps {
   email: string
+  avatarUrl?: string | null
   menu: MenuGroup[]
 }
 
@@ -48,8 +49,8 @@ const { t } = useI18n()
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
             <Avatar>
-              <AvatarImage src="https://github.com/evilrabbit.png" alt="@evilrabbit" />
-              <AvatarFallback>{{ props.email.charAt(0) }}</AvatarFallback>
+              <AvatarImage v-if="props.avatarUrl" :src="props.avatarUrl" :alt="props.email" />
+              <AvatarFallback>{{ props.email.charAt(0).toUpperCase() }}</AvatarFallback>
             </Avatar>
             <div class="flex flex-col gap-0.5 leading-none">
               <span class="font-bold">{{ t('userNav.welcome') }}</span>
