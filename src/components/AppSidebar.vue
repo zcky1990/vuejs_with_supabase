@@ -21,7 +21,7 @@ import { canAccessPath } from '@/lib/permissions'
 import { useRoleStore } from '@/stores/useRoleStore'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from '@/composables/useI18n'
-import { BarChart3, ClipboardList, Inbox, LayoutDashboard, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Shield, Tags, User, Users, Wallet } from '@lucide/vue'
+import { BarChart3, ClipboardCheck, ClipboardList, Inbox, LayoutDashboard, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Shield, Tags, User, Users, Wallet } from '@lucide/vue'
 
 const userEmail = getCookie('_user_email')
 const userAvatar = ref<string | null>(null)
@@ -170,6 +170,14 @@ onUnmounted(() => {
                 <RouterLink to="/stock/restock">
                   <PackagePlus />
                   <span>{{ t('nav.restock') }}</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem v-if="canShow('/stock/opname')">
+              <SidebarMenuButton as-child>
+                <RouterLink to="/stock/opname">
+                  <ClipboardCheck />
+                  <span>{{ t('nav.opname') }}</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

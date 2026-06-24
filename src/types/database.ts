@@ -309,7 +309,7 @@ export type ProcessPreOrderOptions = {
   tableNumber?: string | null
 }
 
-export type StockMovementType = 'restock' | 'sale' | 'adjustment'
+export type StockMovementType = 'restock' | 'sale' | 'adjustment' | 'opname'
 
 export type StockMovement = {
   id: string
@@ -323,6 +323,7 @@ export type StockMovement = {
   total_cost: number | null
   remaining_quantity: number | null
   notes: string | null
+  performed_by: string | null
   created_at: string
 }
 
@@ -343,6 +344,13 @@ export type StockMovementProduct = {
 
 export type StockMovementWithProduct = StockMovement & {
   products: StockMovementProduct | null
+  profiles?: { full_name: string | null, email: string | null } | null
+}
+
+export type StockOpnameInput = {
+  product_id: string
+  physical_count: number
+  reason: string
 }
 
 export type RestockInput = {

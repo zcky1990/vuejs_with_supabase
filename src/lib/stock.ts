@@ -1,5 +1,6 @@
-import { restockSchema } from '@/schema/schema'
+import { restockSchema, stockOpnameSchema } from '@/schema/schema'
 import { useLocaleStore } from '@/stores/useLocaleStore'
+import { getCurrentUser } from './auth'
 import { supabase } from './supabase'
 import type {
   Product,
@@ -7,6 +8,7 @@ import type {
   StockMovement,
   StockMovementType,
   StockMovementWithProduct,
+  StockOpnameInput,
 } from '@/types/database'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -73,6 +75,53 @@ async function consumeFifoLots(
       error: { message: useLocaleStore().translate('error.stockBatchInsufficient') },
       allocations: [],
       totalCost: 0,
+    }
+  }
+
+  return { error: null, allocations, totalCost }
+}
+
+async function consumeFifoLotsBestEffort(
+  supabaseClient: SupabaseClient,
+  productId: string,
+  quantity: number,
+) {
+  const { data: lots, error } = await supabaseClient
+    .from('stock_movements')
+    .select('id, remaining_quantity, unit_cost')
+    .eq('product_id', productId)
+    .eq('movement_type', 'restock')
+    .gt('remaining_quantity', 0)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    return { error, allocations: [] as LotAllocation[], totalCost: 0 }
+  }
+
+  let remaining = quantity
+  const allocations: LotAllocation[] = []
+  let totalCost = 0
+
+  for (const lot of lots ?? []) {
+    if (remaining <= 0) break
+
+    const lotRemaining = lot.remaining_quantity ?? 0
+    if (lotRemaining <= 0) continue
+
+    const take = Math.min(remaining, lotRemaining)
+    const unitCost = Number(lot.unit_cost ?? 0)
+
+    allocations.push({ lotId: lot.id, quantity: take, unitCost })
+    totalCost += take * unitCost
+    remaining -= take
+
+    const { error: updateError } = await supabaseClient
+      .from('stock_movements')
+      .update({ remaining_quantity: lotRemaining - take })
+      .eq('id', lot.id)
+
+    if (updateError) {
+      return { error: updateError, allocations: [], totalCost: 0 }
     }
   }
 
@@ -425,6 +474,107 @@ export const restockProduct = async (input: RestockInput) => {
   })
 }
 
+export const applyStockOpname = async (input: StockOpnameInput) => {
+  const validated = stockOpnameSchema().safeParse(input)
+  if (!validated.success) {
+    return { movement: null, error: validated.error.flatten().fieldErrors }
+  }
+
+  const { user, error: userError } = await getCurrentUser()
+  if (userError || !user) {
+    return {
+      movement: null,
+      error: userError ?? { message: useLocaleStore().translate('shift.userRequired') },
+    }
+  }
+
+  const supabaseClient = supabase()
+  const { data: product, error: productError } = await supabaseClient
+    .from('products')
+    .select('stock_quantity, purchase_price')
+    .eq('id', validated.data.product_id)
+    .single()
+
+  if (productError || !product) {
+    return { movement: null, error: productError ?? { message: useLocaleStore().translate('error.productNotFound') } }
+  }
+
+  const stockBefore = product.stock_quantity
+  const physicalCount = validated.data.physical_count
+  const delta = physicalCount - stockBefore
+
+  if (delta === 0) {
+    return { movement: null, error: { message: useLocaleStore().translate('opname.noDifference') } }
+  }
+
+  const quantity = Math.abs(delta)
+  const stockAfter = physicalCount
+  const reason = validated.data.reason.trim()
+  let allocations: LotAllocation[] = []
+  let totalCost: number | null = null
+  let unitCost: number | null = null
+  let remainingQuantity: number | null = null
+
+  if (delta < 0) {
+    const fifo = await consumeFifoLotsBestEffort(supabaseClient, validated.data.product_id, quantity)
+    if (fifo.error) {
+      return { movement: null, error: fifo.error }
+    }
+
+    allocations = fifo.allocations
+    totalCost = fifo.totalCost
+    unitCost = quantity > 0 ? totalCost / quantity : null
+  } else {
+    unitCost = Number(product.purchase_price ?? 0)
+    totalCost = quantity * unitCost
+    remainingQuantity = quantity
+  }
+
+  const { data: movement, error: movementError } = await supabaseClient
+    .from('stock_movements')
+    .insert({
+      product_id: validated.data.product_id,
+      movement_type: 'opname',
+      quantity,
+      stock_before: stockBefore,
+      stock_after: stockAfter,
+      unit_cost: unitCost,
+      total_cost: totalCost,
+      remaining_quantity: remainingQuantity,
+      notes: reason,
+      performed_by: user.id,
+    })
+    .select()
+    .single()
+
+  if (movementError || !movement) {
+    return { movement: null, error: movementError }
+  }
+
+  if (delta < 0 && allocations.length) {
+    const { error: allocError } = await insertLotAllocations(
+      supabaseClient,
+      movement.id,
+      allocations,
+    )
+
+    if (allocError) {
+      return { movement: null, error: allocError }
+    }
+  }
+
+  const { error: updateError } = await supabaseClient
+    .from('products')
+    .update({ stock_quantity: stockAfter })
+    .eq('id', validated.data.product_id)
+
+  if (updateError) {
+    return { movement: null, error: updateError }
+  }
+
+  return { movement: movement as StockMovement, error: null }
+}
+
 export const recordSaleMovement = async (
   productId: string,
   quantity: number,
@@ -543,7 +693,8 @@ export const getStockMovements = async (filters?: {
     .from('stock_movements')
     .select(`
       *,
-      products ( id, name, sku )
+      products ( id, name, sku ),
+      profiles:performed_by ( full_name, email )
     `)
     .order('created_at', { ascending: false })
 

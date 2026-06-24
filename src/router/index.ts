@@ -16,6 +16,7 @@ import ConfigPages from '@/pages/ConfigPages.vue'
 import QueuePages from '@/pages/QueuePages.vue'
 import QueueDisplayPages from '@/pages/QueueDisplayPages.vue'
 import RestockPages from '@/pages/RestockPages.vue'
+import StockOpnamePages from '@/pages/StockOpnamePages.vue'
 import AnalyticsPages from '@/pages/AnalyticsPages.vue'
 import ShiftPages from '@/pages/ShiftPages.vue'
 import OrderPages from '@/pages/OrderPages.vue'
@@ -115,6 +116,12 @@ const router = createRouter({
       path: '/stock/restock',
       name: 'stock-restock',
       component: RestockPages,
+      meta: { roles: ['owner'] },
+    },
+    {
+      path: '/stock/opname',
+      name: 'stock-opname',
+      component: StockOpnamePages,
       meta: { roles: ['owner'] },
     },
     {

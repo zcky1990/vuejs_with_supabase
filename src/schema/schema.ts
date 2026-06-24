@@ -157,6 +157,16 @@ export function restockSchema() {
 
 export type RestockSchema = z.infer<ReturnType<typeof restockSchema>>
 
+export function stockOpnameSchema() {
+  return z.object({
+    product_id: z.string().uuid({ message: t('validation.productInvalid') }),
+    physical_count: z.coerce.number().int().min(0, { message: t('validation.physicalCountNonNegative') }),
+    reason: z.string().trim().min(1, { message: t('validation.opnameReasonRequired') }),
+  })
+}
+
+export type StockOpnameSchema = z.infer<ReturnType<typeof stockOpnameSchema>>
+
 export function preOrderSubmitSchema() {
   return z.object({
     customer_name: z.string().nullable().optional(),
