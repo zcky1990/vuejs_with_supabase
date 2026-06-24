@@ -48,6 +48,7 @@ const statusClass: Record<QueueStatus, string> = {
   waiting: 'bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-300',
   preparing: 'bg-blue-500/20 border-blue-500 text-blue-700 dark:text-blue-300',
   ready: 'bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300',
+  serving: 'bg-violet-500/20 border-violet-500 text-violet-700 dark:text-violet-300',
   completed: 'bg-muted border-border text-muted-foreground',
   cancelled: 'bg-muted border-border text-muted-foreground',
 }

@@ -19,6 +19,7 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 11. [Rute Aplikasi](#rute-aplikasi)
 12. [Konsep Bisnis: Stok & HPP](#konsep-bisnis-stok--hpp)
 13. [Diagram Aktivitas (Mermaid)](#diagram-aktivitas-mermaid)
+    - [Alur Pesanan Online (Sequence)](#8-alur-pesanan-online--pre-order-ke-antrian-dapur-sequence)
 14. [Troubleshooting](#troubleshooting)
 
 ---
@@ -36,7 +37,7 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 | **Master Pembeli** | CRUD pelanggan |
 | **Transaksi** | Buat penjualan, bayar / simpan hutang, antrian opsional |
 | **Daftar Transaksi** | Filter lunas/hutang, edit qty item |
-| **Antrian** | Status: menunggu → disiapkan → siap → selesai |
+| **Antrian** | Status: menunggu → disiapkan → siap → diantar → selesai |
 | **Layar antrian (`/queue/display`)** | Tampilan fullscreen untuk TV dapur (publik, tanpa login) |
 | **Restock** | Tambah stok per batch dengan harga beli & riwayat |
 | **Analisis** | Pendapatan, HPP FIFO, laba kotor, chart, ranking produk |
@@ -440,6 +441,10 @@ Alur stok:
 
 ## Diagram Aktivitas (Mermaid)
 
+Sub-bagian penting:
+- **§5** — Antrian dapur (status `waiting` → `preparing` → `ready` → `serving` → `completed`)
+- **§8** — [Alur pesanan online lengkap](#8-alur-pesanan-online--pre-order-ke-antrian-dapur-sequence) (pre-order → bayar → antrian → selesai)
+
 ### 1. Autentikasi (Login & Session Guard)
 
 ```mermaid
@@ -539,9 +544,11 @@ flowchart TD
   kitchen --> action{Status saat ini?}
   action -->|waiting| pickup[pickupQueue → preparing]
   action -->|preparing| ready[markQueueReady → ready]
-  action -->|ready| complete[completeQueue → completed]
+  action -->|ready| serving[markQueueServing → serving]
+  action -->|serving| complete[completeQueue → completed]
   pickup --> kitchen
   ready --> kitchen
+  serving --> kitchen
   complete --> endState([Antrian selesai])
 ```
 
@@ -571,6 +578,115 @@ flowchart TD
   calcHPP --> calcProfit[Laba kotor = Pendapatan - HPP]
   calcProfit --> render[Tampilkan KPI cards + chart + tabel produk]
 ```
+
+### 8. Alur Pesanan Online — Pre-order ke Antrian Dapur (Sequence)
+
+Diagram ini menggambarkan alur pesanan dari halaman publik `/order` hingga selesai di dapur. Aplikasi memanggil Supabase langsung (tanpa backend API terpisah); pembaruan antrian disiarkan lewat **Supabase Realtime**.
+
+**Ringkasan status antrian:**
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> waiting: processPreOrder
+    waiting --> preparing: pickupQueue
+    preparing --> ready: markQueueReady
+    ready --> serving: markQueueServing
+    serving --> completed: completeQueue
+    completed --> [*]
+```
+
+| Status | Arti | Tombol di `/queue` |
+|--------|------|-------------------|
+| `waiting` | Menunggu diproses dapur | Pickup |
+| `preparing` | Sedang dimasak / disiapkan | Siap |
+| `ready` | Siap diantar ke pelanggan | Antar |
+| `serving` | Sedang diantarkan ke meja | Selesai |
+| `completed` | Pelanggan sudah menerima | — |
+
+**Sequence diagram lengkap:**
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Pelanggan
+    actor Kasir
+    actor Staff as Staff Dapur
+
+    participant App as Vue App
+    participant SB as Supabase
+
+    Pelanggan->>App: Pilih menu dan kirim pre-order
+    App->>SB: createPreOrder
+    activate SB
+    SB->>SB: Simpan pre_orders status pending
+    SB-->>App: Pre-order dibuat
+    deactivate SB
+    App-->>Pelanggan: Instruksi bayar di kasir
+
+    Pelanggan->>Kasir: Bayar tunai / QRIS / transfer
+    Kasir->>App: Buka orders inbox lalu proses pesanan
+
+    opt Bayar sekarang pay_now
+        Kasir->>App: Konfirmasi pembayaran
+        App->>SB: confirmPreOrderPayment
+        SB->>SB: payment_status confirmed
+    end
+
+    App->>SB: processPreOrder
+    activate SB
+    SB->>SB: Buat transactions lunas dan kurangi stok
+    SB->>SB: Insert order_queues status waiting
+    SB->>SB: Update pre_orders status completed
+    SB-->>App: Transaksi dan nomor antrian
+    SB-->>Staff: Realtime broadcast antrian baru
+    deactivate SB
+
+    Staff->>App: Pickup Order
+    App->>SB: pickupQueue
+    activate SB
+    SB->>SB: status preparing
+    SB-->>App: Pickup berhasil
+    deactivate SB
+
+    Note over Staff: Staff memasak dan menyiapkan pesanan
+
+    Staff->>App: Klik Siap
+    App->>SB: markQueueReady
+    activate SB
+    SB->>SB: status ready
+    SB-->>App: Pesanan siap diantar
+    deactivate SB
+
+    Staff->>App: Klik Antar
+    App->>SB: markQueueServing
+    activate SB
+    SB->>SB: status serving
+    SB-->>App: Pesanan sedang diantar
+    deactivate SB
+
+    Note over Staff,Pelanggan: Staff mengantarkan pesanan ke meja pelanggan
+
+    Staff->>App: Klik Selesai
+    App->>SB: completeQueue
+    activate SB
+    SB->>SB: status completed
+    SB-->>App: Antrian selesai
+    deactivate SB
+```
+
+| Tahap | Status di database | Halaman / aksi |
+|-------|-------------------|----------------|
+| Pre-order masuk | `pre_orders.status = pending` | `/order` → `createPreOrder()` |
+| Menunggu bayar | `payment_status = unpaid` atau `awaiting_confirmation` | `/order/success` |
+| Masuk antrian | `order_queues.status = waiting` | `/orders/inbox` → `processPreOrder()` |
+| Disiapkan | `order_queues.status = preparing` | `/queue` → `pickupQueue()` |
+| Siap diantar | `order_queues.status = ready` | `/queue` → `markQueueReady()` |
+| Sedang diantar | `order_queues.status = serving` | `/queue` → `markQueueServing()` |
+| Selesai | `order_queues.status = completed` | `/queue` → `completeQueue()` |
+
+> **Catatan:** Kasir juga bisa membuat transaksi langsung di `/transactions` tanpa pre-order. Jika opsi antrian diaktifkan, alur dapur tetap: `waiting` → `preparing` → `ready` → `serving` → `completed`.
 
 ---
 

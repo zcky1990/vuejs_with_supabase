@@ -54,6 +54,7 @@ const lowStockProducts = ref<Product[]>([])
 const queueWaiting = ref(0)
 const queuePreparing = ref(0)
 const queueReady = ref(0)
+const queueServing = ref(0)
 
 const userEmail = getCookie('_user_email')
 
@@ -76,7 +77,9 @@ const todayLabel = computed(() =>
   }).format(new Date()),
 )
 
-const activeQueueCount = computed(() => queueWaiting.value + queuePreparing.value + queueReady.value)
+const activeQueueCount = computed(
+  () => queueWaiting.value + queuePreparing.value + queueReady.value + queueServing.value,
+)
 
 const quickActions = computed(() => [
   { to: '/transactions', label: t('dashboard.actionNewTx'), icon: Receipt, description: t('dashboard.actionNewTxDesc') },
@@ -131,6 +134,7 @@ async function loadDashboard() {
   queueWaiting.value = queues.filter((queue) => queue.status === 'waiting').length
   queuePreparing.value = queues.filter((queue) => queue.status === 'preparing').length
   queueReady.value = queues.filter((queue) => queue.status === 'ready').length
+  queueServing.value = queues.filter((queue) => queue.status === 'serving').length
 }
 
 onMounted(loadDashboard)
@@ -206,7 +210,7 @@ onMounted(loadDashboard)
               <p class="mt-1 text-xs text-muted-foreground">
                 {{ activeQueueCount }} {{ t('dashboard.activeQueue') }}
                 <span v-if="activeQueueCount">
-                  ({{ queueWaiting }} {{ t('status.waiting').toLowerCase() }} · {{ queuePreparing }} {{ t('status.preparing').toLowerCase() }} · {{ queueReady }} {{ t('status.ready').toLowerCase() }})
+                  ({{ queueWaiting }} {{ t('status.waiting').toLowerCase() }} · {{ queuePreparing }} {{ t('status.preparing').toLowerCase() }} · {{ queueReady }} {{ t('status.ready').toLowerCase() }} · {{ queueServing }} {{ t('status.serving').toLowerCase() }})
                 </span>
               </p>
             </CardContent>
@@ -254,7 +258,7 @@ onMounted(loadDashboard)
               <div v-if="!activeQueueCount" class="text-sm text-muted-foreground">
                 {{ t('dashboard.noActiveQueue') }}
               </div>
-              <div v-else class="grid grid-cols-3 gap-3">
+              <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div class="rounded-lg border bg-amber-500/10 px-3 py-4 text-center">
                   <p class="text-2xl font-bold">{{ queueWaiting }}</p>
                   <p class="text-xs text-muted-foreground">{{ t('status.waiting') }}</p>
@@ -266,6 +270,10 @@ onMounted(loadDashboard)
                 <div class="rounded-lg border bg-green-500/10 px-3 py-4 text-center">
                   <p class="text-2xl font-bold">{{ queueReady }}</p>
                   <p class="text-xs text-muted-foreground">{{ t('status.ready') }}</p>
+                </div>
+                <div class="rounded-lg border bg-violet-500/10 px-3 py-4 text-center">
+                  <p class="text-2xl font-bold">{{ queueServing }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('status.serving') }}</p>
                 </div>
               </div>
               <Button class="mt-4 w-full" variant="outline" as-child>

@@ -11,6 +11,7 @@ const OCCUPANCY_FILL: Record<QueueStatus, string> = {
   waiting: '#fde68a',
   preparing: '#bfdbfe',
   ready: '#bbf7d0',
+  serving: '#ddd6fe',
   completed: '#f3f4f6',
   cancelled: '#f3f4f6',
 }
@@ -19,6 +20,7 @@ const OCCUPANCY_STROKE: Record<QueueStatus, string> = {
   waiting: '#d97706',
   preparing: '#2563eb',
   ready: '#16a34a',
+  serving: '#7c3aed',
   completed: '#9ca3af',
   cancelled: '#9ca3af',
 }
@@ -97,6 +99,7 @@ function buildFloorHtml(tables: FloorTable[], options?: PrintFloorOptions) {
         <span><i style="background:${OCCUPANCY_FILL.waiting};border-color:${OCCUPANCY_STROKE.waiting}"></i>${escapeHtml(t('status.waiting'))}</span>
         <span><i style="background:${OCCUPANCY_FILL.preparing};border-color:${OCCUPANCY_STROKE.preparing}"></i>${escapeHtml(t('status.preparing'))}</span>
         <span><i style="background:${OCCUPANCY_FILL.ready};border-color:${OCCUPANCY_STROKE.ready}"></i>${escapeHtml(t('status.ready'))}</span>
+        <span><i style="background:${OCCUPANCY_FILL.serving};border-color:${OCCUPANCY_STROKE.serving}"></i>${escapeHtml(t('status.serving'))}</span>
         <span><i style="background:#eef2ff;border-color:#6366f1"></i>${escapeHtml(t('floor.legendFree'))}</span>
       </div>
     `

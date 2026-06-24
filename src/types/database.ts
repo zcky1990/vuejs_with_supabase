@@ -254,7 +254,7 @@ export type TableOccupancy = {
   queueNumber: number
 }
 
-export type QueueStatus = 'waiting' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+export type QueueStatus = 'waiting' | 'preparing' | 'ready' | 'serving' | 'completed' | 'cancelled'
 
 export type OrderQueue = {
   id: string
@@ -265,6 +265,7 @@ export type OrderQueue = {
   table_number: string | null
   picked_up_at: string | null
   ready_at: string | null
+  serving_at: string | null
   completed_at: string | null
   created_at: string
   updated_at: string

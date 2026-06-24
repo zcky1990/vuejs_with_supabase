@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, ChefHat, Play } from '@lucide/vue'
+import { Check, ChefHat, Play, Truck } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useI18n } from '@/composables/useI18n'
@@ -19,6 +19,7 @@ const { t } = useI18n()
 const emit = defineEmits<{
   pickup: [queueId: string]
   markReady: [queueId: string]
+  markServing: [queueId: string]
   complete: [queueId: string]
 }>()
 
@@ -93,6 +94,16 @@ function formatItems(queue: OrderQueueWithDetails) {
         </Button>
         <Button
           v-if="queue.status === 'ready'"
+          size="sm"
+          variant="secondary"
+          :disabled="isUpdating"
+          @click="emit('markServing', queue.id)"
+        >
+          <Truck class="size-4" />
+          {{ t('queue.serve') }}
+        </Button>
+        <Button
+          v-if="queue.status === 'serving'"
           size="sm"
           variant="outline"
           :disabled="isUpdating"

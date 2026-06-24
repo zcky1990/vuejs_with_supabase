@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getQueueStatusLabel, useActiveQueues, useQueueFilter } from '@/composables/useActiveQueues'
 import { useI18n } from '@/composables/useI18n'
-import { completeQueue, markQueueReady, pickupQueue } from '@/lib/queue'
+import { completeQueue, markQueueReady, markQueueServing, pickupQueue } from '@/lib/queue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAlertStore } from '@/stores/useAlertStore'
 
@@ -23,6 +23,7 @@ const {
   waitingCount,
   preparingCount,
   readyCount,
+  servingCount,
 } = useQueueFilter(() => queues.value)
 
 async function handlePickup(queueId: string) {
@@ -49,6 +50,19 @@ async function handleMarkReady(queueId: string) {
   }
 
   alertStore.showAlert(t('alert.success'), t('queue.ready'), 'success')
+}
+
+async function handleMarkServing(queueId: string) {
+  isUpdating.value = true
+  const { error } = await markQueueServing(queueId)
+  isUpdating.value = false
+
+  if (error) {
+    alertStore.showAlert(t('alert.error'), error.message, 'error')
+    return
+  }
+
+  alertStore.showAlert(t('alert.success'), t('queue.serving'), 'success')
 }
 
 async function handleComplete(queueId: string) {
@@ -98,7 +112,7 @@ async function handleComplete(queueId: string) {
         </div>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-3">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent class="p-4">
             <p class="text-sm text-muted-foreground">{{ t('status.waiting') }}</p>
@@ -115,6 +129,12 @@ async function handleComplete(queueId: string) {
           <CardContent class="p-4">
             <p class="text-sm text-muted-foreground">{{ t('status.ready') }}</p>
             <p class="text-2xl font-bold">{{ readyCount }}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent class="p-4">
+            <p class="text-sm text-muted-foreground">{{ t('status.serving') }}</p>
+            <p class="text-2xl font-bold">{{ servingCount }}</p>
           </CardContent>
         </Card>
       </div>
@@ -151,6 +171,7 @@ async function handleComplete(queueId: string) {
           :is-updating="isUpdating"
           @pickup="handlePickup"
           @mark-ready="handleMarkReady"
+          @mark-serving="handleMarkServing"
           @complete="handleComplete"
         />
       </div>

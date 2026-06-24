@@ -26,6 +26,7 @@ const statusClass = {
   waiting: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200',
   preparing: 'bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200',
   ready: 'bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200',
+  serving: 'bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200',
   completed: 'bg-muted text-muted-foreground',
   cancelled: 'bg-muted text-muted-foreground',
 } as const

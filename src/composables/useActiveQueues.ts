@@ -12,6 +12,7 @@ export function getQueueStatusLabel(status: QueueStatus) {
     waiting: 'status.waiting',
     preparing: 'status.preparing',
     ready: 'status.ready',
+    serving: 'status.serving',
     completed: 'status.completed',
     cancelled: 'status.cancelled',
   }
@@ -77,6 +78,7 @@ export function useQueueFilter(queues: () => OrderQueueWithDetails[]) {
     { value: 'waiting' as const, label: localeStore.translate('status.waiting') },
     { value: 'preparing' as const, label: localeStore.translate('status.preparing') },
     { value: 'ready' as const, label: localeStore.translate('status.ready') },
+    { value: 'serving' as const, label: localeStore.translate('status.serving') },
   ])
 
   const filteredQueues = computed(() => {
@@ -90,6 +92,7 @@ export function useQueueFilter(queues: () => OrderQueueWithDetails[]) {
   const waitingCount = computed(() => queues().filter((queue) => queue.status === 'waiting').length)
   const preparingCount = computed(() => queues().filter((queue) => queue.status === 'preparing').length)
   const readyCount = computed(() => queues().filter((queue) => queue.status === 'ready').length)
+  const servingCount = computed(() => queues().filter((queue) => queue.status === 'serving').length)
 
   return {
     activeFilter,
@@ -98,5 +101,6 @@ export function useQueueFilter(queues: () => OrderQueueWithDetails[]) {
     waitingCount,
     preparingCount,
     readyCount,
+    servingCount,
   }
 }

@@ -77,7 +77,7 @@ export const getActiveQueues = async () => {
       )
     `)
     .eq('queue_date', getShopDateString())
-    .in('status', ['waiting', 'preparing', 'ready'])
+    .in('status', ['waiting', 'preparing', 'ready', 'serving'])
     .order('queue_number', { ascending: true })
 
   return { queues: data as OrderQueueWithDetails[] | null, error }
@@ -93,6 +93,10 @@ export const updateQueueStatus = async (queueId: string, status: QueueStatus) =>
 
   if (status === 'ready') {
     payload.ready_at = now
+  }
+
+  if (status === 'serving') {
+    payload.serving_at = now
   }
 
   if (status === 'completed') {
@@ -114,6 +118,8 @@ export const pickupQueue = async (queueId: string) => updateQueueStatus(queueId,
 
 export const markQueueReady = async (queueId: string) => updateQueueStatus(queueId, 'ready')
 
+export const markQueueServing = async (queueId: string) => updateQueueStatus(queueId, 'serving')
+
 export const completeQueue = async (queueId: string) => updateQueueStatus(queueId, 'completed')
 
 export const cancelQueueByTransactionId = async (transactionId: string) => {
@@ -122,7 +128,7 @@ export const cancelQueueByTransactionId = async (transactionId: string) => {
     .from('order_queues')
     .update({ status: 'cancelled' })
     .eq('transaction_id', transactionId)
-    .in('status', ['waiting', 'preparing', 'ready'])
+    .in('status', ['waiting', 'preparing', 'ready', 'serving'])
     .select()
 
   return { queues: data as OrderQueue[] | null, error }
