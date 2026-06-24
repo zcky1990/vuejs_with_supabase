@@ -1,61 +1,13 @@
 import { getShopDateString } from './date'
 import { supabase } from './supabase'
 import { getCurrentUser } from './auth'
+import { buildPaymentBreakdown, sumPaymentByMethod } from './payment-breakdown'
 import { useLocaleStore } from '@/stores/useLocaleStore'
 import type {
   CashierShift,
-  PaymentBreakdownRow,
-  PaymentMethod,
   ShiftLiveTotals,
   Transaction,
 } from '@/types/database'
-
-const PAYMENT_LABEL_KEYS: Record<PaymentMethod, string> = {
-  cash: 'payment.cash',
-  qris: 'payment.qris',
-  transfer: 'payment.transfer',
-}
-
-function paymentLabel(method: PaymentMethod) {
-  return useLocaleStore().translate(PAYMENT_LABEL_KEYS[method])
-}
-
-function sumByMethod(transactions: Pick<Transaction, 'payment_method' | 'total_amount'>[]) {
-  let cashSales = 0
-  let qrisSales = 0
-  let transferSales = 0
-
-  for (const row of transactions) {
-    const amount = Number(row.total_amount)
-    if (row.payment_method === 'cash') cashSales += amount
-    else if (row.payment_method === 'qris') qrisSales += amount
-    else if (row.payment_method === 'transfer') transferSales += amount
-  }
-
-  return { cashSales, qrisSales, transferSales }
-}
-
-function buildPaymentBreakdown(transactions: Pick<Transaction, 'payment_method' | 'total_amount'>[]): PaymentBreakdownRow[] {
-  const byMethod = new Map<PaymentMethod, PaymentBreakdownRow>()
-
-  for (const row of transactions) {
-    if (!row.payment_method) continue
-
-    const method = row.payment_method
-    const existing = byMethod.get(method) ?? {
-      method,
-      label: paymentLabel(method),
-      transactionCount: 0,
-      amount: 0,
-    }
-
-    existing.transactionCount += 1
-    existing.amount += Number(row.total_amount)
-    byMethod.set(method, existing)
-  }
-
-  return Array.from(byMethod.values()).sort((a, b) => b.amount - a.amount)
-}
 
 async function getShiftPaidTransactions(shiftId: string) {
   const supabaseClient = supabase()
@@ -127,8 +79,7 @@ export async function getShiftLiveTotals(shift: CashierShift): Promise<{ totals:
     return { totals: null, error }
   }
 
-  const { cashSales, qrisSales, transferSales } = sumByMethod(transactions)
-  const totalSales = cashSales + qrisSales + transferSales
+  const { cashSales, qrisSales, transferSales, totalSales } = sumPaymentByMethod(transactions)
 
   return {
     totals: {
@@ -170,8 +121,7 @@ export async function closeShift(
     return { shift: null, error: txError }
   }
 
-  const { cashSales, qrisSales, transferSales } = sumByMethod(transactions)
-  const totalSales = cashSales + qrisSales + transferSales
+  const { cashSales, qrisSales, transferSales, totalSales } = sumPaymentByMethod(transactions)
   const closingBalanceExpected = Number(shift.opening_balance) + cashSales
   const cashVariance = closingBalanceActual - closingBalanceExpected
 
@@ -221,6 +171,8 @@ export async function getDayShiftSummary(shiftDate = getShopDateString()) {
     closedCount: closed.length,
     totalSales: closed.reduce((sum, shift) => sum + Number(shift.total_sales ?? 0), 0),
     cashSales: closed.reduce((sum, shift) => sum + Number(shift.cash_sales ?? 0), 0),
+    qrisSales: closed.reduce((sum, shift) => sum + Number(shift.qris_sales ?? 0), 0),
+    transferSales: closed.reduce((sum, shift) => sum + Number(shift.transfer_sales ?? 0), 0),
     cashVariance: closed.reduce((sum, shift) => sum + Number(shift.cash_variance ?? 0), 0),
     transactionCount: closed.reduce((sum, shift) => sum + Number(shift.transaction_count ?? 0), 0),
   }

@@ -6,9 +6,11 @@ import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CancelTransactionDialog from '@/components/transactions/CancelTransactionDialog.vue'
 import CustomerTransactionsDialog from '@/components/transactions/CustomerTransactionsDialog.vue'
 import PaymentMethodDialog from '@/components/transactions/PaymentMethodDialog.vue'
+import PaymentBreakdownCards from '@/components/transactions/PaymentBreakdownCards.vue'
 import PaymentSuccessDialog from '@/components/transactions/PaymentSuccessDialog.vue'
 import TransactionDetailDialog from '@/components/transactions/TransactionDetailDialog.vue'
 import TransactionEditDialog from '@/components/transactions/TransactionEditDialog.vue'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -20,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { useI18n } from '@/composables/useI18n'
 import { getTransactions, isActiveTransaction, markTransactionAsPaid } from '@/lib/transaction'
+import { buildPaymentBreakdownWithZeros } from '@/lib/payment-breakdown'
 import { buildInvoiceFromTransaction, type InvoiceData } from '@/lib/invoice'
 import { printTransactionReceipt } from '@/lib/print-invoice'
 import { formatPrice } from '@/lib/format'
@@ -77,6 +80,25 @@ const filteredTransactions = computed(() => {
 
   return transactions.value
 })
+
+const paidTransactionsForSummary = computed(() =>
+  filteredTransactions.value.filter(
+    (transaction) => isActiveTransaction(transaction) && transaction.is_paid && transaction.payment_method,
+  ),
+)
+
+const paymentBreakdown = computed(() =>
+  buildPaymentBreakdownWithZeros(
+    paidTransactionsForSummary.value.map((transaction) => ({
+      payment_method: transaction.payment_method!,
+      total_amount: transaction.total_amount,
+    })),
+  ),
+)
+
+const showPaymentSummary = computed(() =>
+  viewMode.value === 'transaction' && paidTransactionsForSummary.value.length > 0,
+)
 
 function transactionStatusLabel(transaction: TransactionWithDetails) {
   if (!isActiveTransaction(transaction)) return t('status.cancelled')
@@ -320,6 +342,16 @@ onMounted(loadTransactions)
         </div>
       </div>
 
+      <Card v-if="showPaymentSummary">
+        <CardHeader class="pb-3">
+          <CardTitle class="text-base">{{ t('transaction.fundBreakdown') }}</CardTitle>
+          <CardDescription>{{ t('transaction.fundBreakdownDesc') }}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PaymentBreakdownCards :rows="paymentBreakdown" />
+        </CardContent>
+      </Card>
+
       <div class="rounded-xl border bg-background">
         <Table>
           <TableHeader v-if="viewMode === 'transaction'">
@@ -327,6 +359,7 @@ onMounted(loadTransactions)
               <TableHead>{{ t('common.date') }}</TableHead>
               <TableHead>{{ t('common.buyer') }}</TableHead>
               <TableHead>{{ t('common.product') }}</TableHead>
+              <TableHead>{{ t('common.notes') }}</TableHead>
               <TableHead>{{ t('common.status') }}</TableHead>
               <TableHead class="text-right">{{ t('common.total') }}</TableHead>
               <TableHead class="text-right">{{ t('common.actions') }}</TableHead>
@@ -345,14 +378,14 @@ onMounted(loadTransactions)
 
           <TableBody>
             <TableRow v-if="isLoading">
-              <TableCell :colspan="6" class="text-center text-muted-foreground">
+              <TableCell :colspan="7" class="text-center text-muted-foreground">
                 {{ t('common.loading') }}
               </TableCell>
             </TableRow>
 
             <template v-else-if="viewMode === 'transaction'">
               <TableRow v-if="!filteredTransactions.length">
-                <TableCell :colspan="6" class="text-center text-muted-foreground">
+                <TableCell :colspan="7" class="text-center text-muted-foreground">
                   {{ transactions.length ? t('transaction.noFilterMatch') : t('transaction.noTransactions') }}
                 </TableCell>
               </TableRow>
@@ -362,6 +395,9 @@ onMounted(loadTransactions)
                   {{ displayCustomerName(transaction.customers?.name) }}
                 </TableCell>
                 <TableCell>{{ transaction.transaction_items.length }} {{ t('common.items') }}</TableCell>
+                <TableCell class="max-w-[200px] truncate text-muted-foreground" :title="transaction.notes ?? undefined">
+                  {{ transaction.notes?.trim() || '-' }}
+                </TableCell>
                 <TableCell>
                   <span
                     class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { Clock, RefreshCw, Wallet } from '@lucide/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import PaymentBreakdownCards from '@/components/transactions/PaymentBreakdownCards.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -34,6 +35,7 @@ import {
   getShiftLiveTotals,
   openShift,
 } from '@/lib/shift'
+import { mergePaymentBreakdownWithZeros, paymentMethodLabel } from '@/lib/payment-breakdown'
 import { useAlertStore } from '@/stores/useAlertStore'
 import type { CashierShift, ShiftLiveTotals } from '@/types/database'
 
@@ -50,6 +52,8 @@ const dayTotals = ref<{
   closedCount: number
   totalSales: number
   cashSales: number
+  qrisSales: number
+  transferSales: number
   cashVariance: number
   transactionCount: number
 } | null>(null)
@@ -67,6 +71,35 @@ const closingVariance = computed(() => {
   if (!Number.isFinite(actual)) return null
   return actual - expectedCash.value
 })
+
+const dayPaymentBreakdown = computed(() => {
+  if (!dayTotals.value) return []
+
+  return mergePaymentBreakdownWithZeros([
+    {
+      method: 'cash',
+      label: paymentMethodLabel('cash'),
+      transactionCount: 0,
+      amount: dayTotals.value.cashSales,
+    },
+    {
+      method: 'qris',
+      label: paymentMethodLabel('qris'),
+      transactionCount: 0,
+      amount: dayTotals.value.qrisSales,
+    },
+    {
+      method: 'transfer',
+      label: paymentMethodLabel('transfer'),
+      transactionCount: 0,
+      amount: dayTotals.value.transferSales,
+    },
+  ])
+})
+
+const openShiftPaymentBreakdown = computed(() =>
+  mergePaymentBreakdownWithZeros(liveTotals.value?.payments ?? []),
+)
 
 function formatDateTime(value: string | null) {
   if (!value) return '-'
@@ -241,13 +274,9 @@ async function handleCloseShift() {
               <p class="text-xs text-muted-foreground">{{ t('shift.expectedCash') }}</p>
               <p class="mt-1 text-lg font-semibold">{{ formatPrice(liveTotals?.expectedCashInDrawer ?? openShiftRow.opening_balance) }}</p>
             </div>
-            <div
-              v-for="payment in liveTotals?.payments ?? []"
-              :key="payment.method"
-              class="rounded-lg border p-4 sm:col-span-2 lg:col-span-1"
-            >
-              <p class="text-xs text-muted-foreground">{{ payment.label }}</p>
-              <p class="mt-1 font-semibold">{{ formatPrice(payment.amount) }}</p>
+            <div class="sm:col-span-2 lg:col-span-4">
+              <p class="mb-3 text-sm font-medium">{{ t('shift.paymentBreakdown') }}</p>
+              <PaymentBreakdownCards :rows="openShiftPaymentBreakdown" />
             </div>
           </div>
         </CardContent>
@@ -265,24 +294,31 @@ async function handleCloseShift() {
           </Field>
         </CardHeader>
         <CardContent class="space-y-4">
-          <div v-if="dayTotals" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-lg border p-4">
-              <p class="text-xs text-muted-foreground">{{ t('shift.closedShifts') }}</p>
-              <p class="mt-1 text-lg font-semibold">{{ dayTotals.closedCount }} / {{ dayTotals.shiftCount }}</p>
+          <div v-if="dayTotals" class="space-y-4">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div class="rounded-lg border p-4">
+                <p class="text-xs text-muted-foreground">{{ t('shift.closedShifts') }}</p>
+                <p class="mt-1 text-lg font-semibold">{{ dayTotals.closedCount }} / {{ dayTotals.shiftCount }}</p>
+              </div>
+              <div class="rounded-lg border p-4">
+                <p class="text-xs text-muted-foreground">{{ t('shift.totalSalesDay') }}</p>
+                <p class="mt-1 text-lg font-semibold">{{ formatPrice(dayTotals.totalSales) }}</p>
+              </div>
+              <div class="rounded-lg border p-4">
+                <p class="text-xs text-muted-foreground">{{ t('shift.totalVariance') }}</p>
+                <p class="mt-1 text-lg font-semibold" :class="varianceClass(dayTotals.cashVariance)">
+                  {{ formatPrice(dayTotals.cashVariance) }}
+                </p>
+              </div>
+              <div class="rounded-lg border p-4">
+                <p class="text-xs text-muted-foreground">{{ t('shift.transactionCount', { count: dayTotals.transactionCount }) }}</p>
+                <p class="mt-1 text-lg font-semibold">{{ dayTotals.transactionCount }}</p>
+              </div>
             </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-xs text-muted-foreground">{{ t('shift.totalSalesDay') }}</p>
-              <p class="mt-1 text-lg font-semibold">{{ formatPrice(dayTotals.totalSales) }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-xs text-muted-foreground">{{ t('shift.cashSalesDay') }}</p>
-              <p class="mt-1 text-lg font-semibold">{{ formatPrice(dayTotals.cashSales) }}</p>
-            </div>
-            <div class="rounded-lg border p-4">
-              <p class="text-xs text-muted-foreground">{{ t('shift.totalVariance') }}</p>
-              <p class="mt-1 text-lg font-semibold" :class="varianceClass(dayTotals.cashVariance)">
-                {{ formatPrice(dayTotals.cashVariance) }}
-              </p>
+
+            <div>
+              <p class="mb-3 text-sm font-medium">{{ t('shift.paymentBreakdown') }}</p>
+              <PaymentBreakdownCards :rows="dayPaymentBreakdown" />
             </div>
           </div>
 
@@ -369,9 +405,17 @@ async function handleCloseShift() {
           <DialogDescription>{{ t('shift.closeShiftDesc') }}</DialogDescription>
         </DialogHeader>
         <div class="space-y-4">
-          <div class="rounded-lg border bg-muted/40 px-3 py-3 text-sm">
+          <div class="rounded-lg border bg-muted/40 px-3 py-3 text-sm space-y-2">
             <p>{{ t('shift.expectedCash') }}: <strong>{{ formatPrice(expectedCash) }}</strong></p>
-            <p class="mt-1 text-muted-foreground">{{ t('shift.closeCashHint') }}</p>
+            <p class="text-muted-foreground">{{ t('shift.closeCashHint') }}</p>
+            <div v-if="liveTotals" class="border-t pt-2">
+              <p class="mb-2 font-medium">{{ t('shift.paymentBreakdown') }}</p>
+              <div class="grid gap-2 sm:grid-cols-3">
+                <p>{{ t('payment.cash') }}: <strong>{{ formatPrice(liveTotals.cashSales) }}</strong></p>
+                <p>{{ t('payment.qris') }}: <strong>{{ formatPrice(liveTotals.qrisSales) }}</strong></p>
+                <p>{{ t('payment.transfer') }}: <strong>{{ formatPrice(liveTotals.transferSales) }}</strong></p>
+              </div>
+            </div>
           </div>
           <Field>
             <FieldLabel for="closing-balance">{{ t('shift.actualCash') }}</FieldLabel>

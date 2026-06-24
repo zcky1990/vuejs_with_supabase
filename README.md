@@ -21,6 +21,10 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 13. [Diagram Aktivitas (Mermaid)](#diagram-aktivitas-mermaid)
     - [Alur Pesanan Online (Sequence)](#8-alur-pesanan-online--pre-order-ke-antrian-dapur-sequence)
     - [Makan Dulu, Bayar Nanti (Dine-in)](#9-makan-dulu-bayar-nanti-dine-in)
+      - [Kasir — Bayar Dulu](#91-kasir--bayar-dulu)
+      - [Kasir — Makan Dulu, Bayar Nanti](#92-kasir--makan-dulu-bayar-nanti)
+      - [QR Pre-order — Bayar Sekarang (pay_now)](#93-qr-pre-order--bayar-sekarang-pay_now)
+      - [QR Pre-order — Makan Dulu (pay_later)](#94-qr-pre-order--makan-dulu-pay_later)
 14. [Troubleshooting](#troubleshooting)
 
 ---
@@ -705,9 +709,14 @@ sequenceDiagram
 
 ### 9. Makan Dulu, Bayar Nanti (Dine-in)
 
-Alur **eat-first** memungkinkan pelanggan makan dulu dan bayar setelah selesai. Transaksi dibuat dengan `is_paid = false` (bon terbuka); stok tetap berkurang saat pesanan dibuat agar dapur bisa memproses.
+Aplikasi mendukung dua jenis pembayaran dine-in:
 
-**Pengaturan toko** (`/config` → Mode Pembayaran Dine-in):
+| Jenis | Kode / tombol | Kapan transaksi lunas | Saluran |
+|-------|---------------|----------------------|---------|
+| **Bayar dulu** | Kasir: Bayar / Bayar + Antrian · QR: `pay_now` | Saat pesanan dibuat / dikonfirmasi kasir | `/transactions`, `/order` → inbox |
+| **Makan dulu, bayar nanti** | Kasir: Makan Dulu / Makan Dulu + Antrian · QR: `pay_later` | Setelah makan lewat `/transactions/open` | `/transactions`, `/order` → inbox |
+
+Mode mana yang tersedia dikontrol lewat **`/config` → Mode Pembayaran Dine-in**:
 
 | `payment_flow_mode` | Perilaku |
 |---------------------|----------|
@@ -720,10 +729,16 @@ Alur **eat-first** memungkinkan pelanggan makan dulu dan bayar setelah selesai. 
 | `true` (default) | Walk-in dan pre-order `pay_later` wajib nomor meja |
 | `false` | Walk-in boleh hutang tanpa meja |
 
-**Merge bon terbuka (hari yang sama):**
+**Merge bon terbuka (hari yang sama, hanya makan dulu):**
 
 - Pelanggan terdaftar → gabung per `customer_id`
 - Walk-in → gabung per `table_number` (meja berbeda tidak tercampur)
+
+---
+
+#### 9.1 Kasir — Bayar Dulu
+
+Pelanggan bayar di kasir sebelum pesanan diproses. Transaksi langsung `is_paid = true`. Tersedia jika `payment_flow_mode` bukan `eat_first_only`.
 
 ```mermaid
 sequenceDiagram
@@ -736,26 +751,209 @@ sequenceDiagram
     participant App as Vue App
     participant SB as Supabase
 
-    Note over Pelanggan,App: Via kasir /transactions atau QR /order (pay_later)
+    Pelanggan->>Kasir: Pilih menu di kasir
+    Kasir->>App: Buka /transactions, pilih pelanggan, isi keranjang
 
-    Pelanggan->>App: Pesan dine-in + nomor meja
+    alt Bayar + Antrian
+        Kasir->>App: Klik Bayar + Antrian, isi nomor meja (opsional)
+        App->>App: Dialog metode bayar
+        Kasir->>App: Pilih tunai / QRIS / transfer
+    else Bayar saja
+        Kasir->>App: Klik Bayar
+        App->>App: Dialog metode bayar
+        Kasir->>App: Pilih tunai / QRIS / transfer
+    end
+
+    App->>SB: createTransaction is_paid=true + payment_method
+    activate SB
+    SB->>SB: Kurangi stok
+  opt Antrian aktif
+        SB->>SB: Insert order_queues status waiting
+        SB-->>Staff: Realtime antrian baru
+    end
+    SB-->>App: Transaksi lunas (+ nomor antrian)
+    deactivate SB
+
+    App-->>Kasir: Struk / konfirmasi sukses
+
+    opt Ada antrian
+        Staff->>App: waiting → preparing → ready → serving → completed
+    end
+```
+
+| Tahap | Status di database | Halaman / aksi |
+|-------|-------------------|----------------|
+| Transaksi lunas | `transactions.is_paid = true`, `paid_at` terisi | `/transactions` → Bayar |
+| Antrian (opsional) | `order_queues.status = waiting` … `completed` | `/queue` |
+
+---
+
+#### 9.2 Kasir — Makan Dulu, Bayar Nanti
+
+Bon terbuka (`is_paid = false`); pelanggan makan dulu, bayar setelah selesai. Tersedia jika `payment_flow_mode` bukan `pay_first_only`. Walk-in wajib nomor meja jika `require_table_for_eat_first = true`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Pelanggan
+    actor Kasir
+    actor Staff as Staff Dapur
+
+    participant App as Vue App
+    participant SB as Supabase
+
+    Pelanggan->>Kasir: Pesan dine-in
+    Kasir->>App: Buka /transactions, pilih pelanggan / walk-in
+
+    alt Walk-in + require_table_for_eat_first
+        Kasir->>App: Isi nomor meja (wajib)
+    else Pelanggan terdaftar
+        Kasir->>App: Isi nomor meja (opsional)
+    end
+
+    Kasir->>App: Klik Makan Dulu + Antrian (atau Makan Dulu saja)
     App->>SB: createTransaction is_paid=false + table_number
-    App->>SB: createQueue status waiting (opsional)
-    SB-->>Staff: Realtime antrian baru
+    activate SB
+    SB->>SB: Kurangi stok
+    opt Antrian
+        SB->>SB: Insert order_queues status waiting
+        SB-->>Staff: Realtime antrian baru
+    end
+    SB-->>App: Bon terbuka dibuat
+    deactivate SB
 
     Staff->>App: waiting → preparing → ready → serving → completed
 
-    Pelanggan->>Kasir: Minta bon setelah makan
+    Note over Pelanggan,Kasir: Pelanggan selesai makan
+
+    Pelanggan->>Kasir: Minta bon
     Kasir->>App: Buka /transactions/open
+    Kasir->>App: Klik Bayar, pilih metode
+    App->>SB: markTransactionAsPaid
+    activate SB
+    SB->>SB: is_paid=true, paid_at, shift_id
+    SB-->>App: Transaksi lunas
+    deactivate SB
+```
+
+| Tahap | Status di database | Halaman / aksi |
+|-------|-------------------|----------------|
+| Bon dibuka | `transactions.is_paid = false`, `status = active` | `/transactions` → Makan Dulu |
+| Antrian dapur | `order_queues.status = waiting` … `completed` | `/queue` |
+| Tagihan | `transactions.is_paid = true`, `paid_at` terisi | `/transactions/open` → Bayar |
+
+---
+
+#### 9.3 QR Pre-order — Bayar Sekarang (pay_now)
+
+Pelanggan memilih **bayar di kasir** saat memesan lewat `/order`. Kasir harus konfirmasi pembayaran di inbox sebelum pesanan masuk dapur. Tersedia jika `payment_flow_mode` bukan `eat_first_only`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Pelanggan
+    actor Kasir
+    actor Staff as Staff Dapur
+
+    participant App as Vue App
+    participant SB as Supabase
+
+    Pelanggan->>App: Scan QR, buka /order, pilih pay_now
+    App->>SB: createPreOrder payment_choice=pay_now
+    activate SB
+    SB->>SB: pre_orders status=pending, payment_status=awaiting_confirmation
+    SB-->>App: Nomor pesanan
+    deactivate SB
+    App-->>Pelanggan: Instruksi bayar di kasir
+
+    Pelanggan->>Kasir: Bayar tunai / QRIS / transfer
+    Kasir->>App: Buka /orders/inbox, proses pesanan
+
+    Kasir->>App: Konfirmasi pembayaran + metode bayar
+    App->>SB: confirmPreOrderPayment
+    SB->>SB: payment_status=confirmed
+
+    Kasir->>App: Proses ke dapur (+ antrian opsional)
+    App->>SB: processPreOrder + paymentMethod
+    activate SB
+    SB->>SB: createTransaction is_paid=true
+    SB->>SB: Kurangi stok
+    SB->>SB: Insert order_queues status waiting
+    SB->>SB: pre_orders status=completed
+    SB-->>Staff: Realtime antrian baru
+    SB-->>App: Transaksi lunas + nomor antrian
+    deactivate SB
+
+    Staff->>App: waiting → preparing → ready → serving → completed
+```
+
+| Tahap | Status di database | Halaman / aksi |
+|-------|-------------------|----------------|
+| Pre-order masuk | `pre_orders.status = pending`, `payment_choice = pay_now` | `/order` |
+| Menunggu bayar | `payment_status = awaiting_confirmation` | `/order/success` |
+| Pembayaran dikonfirmasi | `payment_status = confirmed` | `/orders/inbox` → konfirmasi bayar |
+| Masuk antrian | `transactions.is_paid = true`, `order_queues.status = waiting` | `/orders/inbox` → proses |
+| Selesai dapur | `order_queues.status = completed` | `/queue` |
+
+---
+
+#### 9.4 QR Pre-order — Makan Dulu (pay_later)
+
+Pelanggan memilih **makan dulu, bayar nanti** (default jika `eat_first_only`). Kasir langsung kirim ke dapur tanpa bayar; tagihan dibayar setelah makan. Tersedia jika `payment_flow_mode` bukan `pay_first_only`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Pelanggan
+    actor Kasir
+    actor Staff as Staff Dapur
+
+    participant App as Vue App
+    participant SB as Supabase
+
+    Pelanggan->>App: Scan QR, buka /order, pilih pay_later
+    Pelanggan->>App: Isi nomor meja (wajib jika require_table_for_eat_first)
+    App->>SB: createPreOrder payment_choice=pay_later + table_number
+    activate SB
+    SB->>SB: pre_orders status=pending, payment_status=unpaid
+    SB-->>App: Nomor pesanan
+    deactivate SB
+    App-->>Pelanggan: Pesanan terkirim, tunggu dari dapur
+
+    Kasir->>App: Buka /orders/inbox
+    Kasir->>App: Klik Kirim ke Dapur (tanpa dialog bayar)
+    App->>SB: processPreOrder tanpa paymentMethod
+    activate SB
+    SB->>SB: createTransaction is_paid=false + table_number
+    SB->>SB: Kurangi stok
+    SB->>SB: Insert order_queues status waiting
+    SB->>SB: pre_orders status=completed
+    SB-->>Staff: Realtime antrian baru
+    SB-->>App: Bon terbuka + nomor antrian
+    deactivate SB
+
+    Staff->>App: waiting → preparing → ready → serving → completed
+
+    Note over Pelanggan,Kasir: Pelanggan selesai makan
+
+    Pelanggan->>Kasir: Minta bon
+    Kasir->>App: Buka /transactions/open → Bayar
     App->>SB: markTransactionAsPaid
     SB-->>App: Transaksi lunas
 ```
 
 | Tahap | Status di database | Halaman / aksi |
 |-------|-------------------|----------------|
-| Bon dibuka | `transactions.is_paid = false`, `status = active` | `/transactions` → Makan Dulu, atau `/orders/inbox` → Kirim ke Dapur |
-| Antrian dapur | `order_queues.status = waiting` … `completed` | `/queue` |
-| Tagihan | `transactions.is_paid = true`, `paid_at` terisi | `/transactions/open` → Bayar |
+| Pre-order masuk | `pre_orders.status = pending`, `payment_choice = pay_later` | `/order` |
+| Tanpa bayar di depan | `payment_status = unpaid` | `/order/success` |
+| Bon + antrian | `transactions.is_paid = false`, `order_queues.status = waiting` | `/orders/inbox` → Kirim ke Dapur |
+| Selesai makan | `order_queues.status = completed` | `/queue` |
+| Tagihan | `transactions.is_paid = true` | `/transactions/open` → Bayar |
+
+---
 
 > **DDL:** Jalankan [`27-transactions_table_number.ddl`](DDL/27-transactions_table_number.ddl) dan [`28-shop_config_payment_flow.ddl`](DDL/28-shop_config_payment_flow.ddl) sebelum menggunakan fitur ini.
 
