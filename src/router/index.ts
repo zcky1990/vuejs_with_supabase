@@ -26,6 +26,9 @@ import AnalyticsPages from '@/pages/AnalyticsPages.vue'
 import ShiftPages from '@/pages/ShiftPages.vue'
 import OrderPages from '@/pages/OrderPages.vue'
 import OrderSuccessPages from '@/pages/OrderSuccessPages.vue'
+import BookPages from '@/pages/BookPages.vue'
+import BookingSuccessPages from '@/pages/BookingSuccessPages.vue'
+import BookingListPages from '@/pages/BookingListPages.vue'
 import PreOrderInboxPages from '@/pages/PreOrderInboxPages.vue'
 import UserRoleMasterPages from '@/pages/UserRoleMasterPages.vue'
 import ProfilePages from '@/pages/ProfilePages.vue'
@@ -55,6 +58,16 @@ const router = createRouter({
       path: '/sign-up',
       name: 'sign-up',
       component: SignUpView,
+    },
+    {
+      path: '/book',
+      name: 'book',
+      component: BookPages,
+    },
+    {
+      path: '/book/success',
+      name: 'book-success',
+      component: BookingSuccessPages,
     },
     {
       path: '/order',
@@ -178,6 +191,11 @@ const router = createRouter({
       component: PreOrderInboxPages,
     },
     {
+      path: '/bookings',
+      name: 'bookings',
+      component: BookingListPages,
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: NotFoundView,
@@ -190,7 +208,7 @@ router.beforeEach(async (to) => {
     return true
   }
 
-  if (to.path === '/' || to.path === '/order' || to.path === '/order/success') {
+  if (to.path === '/' || to.path === '/order' || to.path === '/order/success' || to.path === '/book' || to.path === '/book/success') {
     return true
   }
 

@@ -1,3 +1,4 @@
+import { getReservedTableNumbersForToday } from './booking'
 import { supabase } from './supabase'
 import { getActiveQueues } from './queue'
 import { ACTIVE_TRANSACTION_STATUS } from './transaction'
@@ -124,13 +125,21 @@ async function getOpenTableNumbersToday() {
 }
 
 export const getTableOccupancy = async () => {
-  const [{ queues, error: queueError }, { tableNumbers, error: txError }] = await Promise.all([
+  const [
+    { queues, error: queueError },
+    { tableNumbers, error: txError },
+    { reservedByLabel, error: reservedError },
+  ] = await Promise.all([
     getActiveQueues(),
     getOpenTableNumbersToday(),
+    getReservedTableNumbersForToday(),
   ])
 
-  if (queueError || txError) {
-    return { occupancyByLabel: {} as Record<string, TableOccupancy>, error: queueError ?? txError }
+  if (queueError || txError || reservedError) {
+    return {
+      occupancyByLabel: {} as Record<string, TableOccupancy>,
+      error: queueError ?? txError ?? reservedError,
+    }
   }
 
   const occupancyByLabel: Record<string, TableOccupancy> = {}
@@ -161,6 +170,18 @@ export const getTableOccupancy = async () => {
     }
   }
 
+  for (const [label] of Object.entries(reservedByLabel)) {
+    if (occupancyByLabel[label]) {
+      continue
+    }
+
+    occupancyByLabel[label] = {
+      label,
+      status: 'reserved',
+      queueNumber: null,
+    }
+  }
+
   return { occupancyByLabel, error: null }
 }
 
@@ -182,6 +203,11 @@ export const subscribeFloorOccupancy = (
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'transactions' },
+      () => onChange(),
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'table_bookings' },
       () => onChange(),
     )
     .subscribe((status) => {

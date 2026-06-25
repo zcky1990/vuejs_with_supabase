@@ -155,6 +155,12 @@ export function shopConfigSchema() {
     payment_flow_mode: z.enum(['pay_first_only', 'eat_first_only', 'both']).optional(),
     require_table_for_eat_first: z.boolean().optional(),
     menu_category_ids: z.array(z.string().uuid()).nullable().optional(),
+    enable_table_booking: z.boolean().optional(),
+    booking_duration_minutes: z.coerce.number().int().min(30).max(480).optional(),
+    booking_advance_days_max: z.coerce.number().int().min(1).max(365).optional(),
+    booking_open_time: z.string().optional(),
+    booking_close_time: z.string().optional(),
+    booking_auto_confirm: z.boolean().optional(),
   })
 }
 
@@ -220,6 +226,25 @@ export function preOrderSubmitSchema() {
 }
 
 export type PreOrderSubmitSchema = z.infer<ReturnType<typeof preOrderSubmitSchema>>
+
+export function tableBookingCreateSchema() {
+  return z.object({
+    dining_table_ids: z
+      .array(z.string().uuid({ message: t('validation.tableInvalid') }))
+      .min(1, { message: t('validation.minOneTable') }),
+    customer_name: z.string().trim().nullable().optional(),
+    customer_phone: z.string().trim().nullable().optional(),
+    party_size: z.coerce.number().int().min(1, { message: t('validation.partySizeMin') }),
+    scheduled_at: z.string().datetime({
+      offset: true,
+      message: t('validation.scheduledAtInvalid'),
+    }),
+    notes: z.string().trim().nullable().optional(),
+    items: z.array(transactionItemSchema()).min(1, { message: t('validation.minOneProduct') }),
+  })
+}
+
+export type TableBookingCreateSchema = z.infer<ReturnType<typeof tableBookingCreateSchema>>
 
 export function profileUpdateSchema() {
   return z.object({

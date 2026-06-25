@@ -28,17 +28,26 @@ const props = withDefaults(
     editable?: boolean
     selectedId?: string | null
     occupancyByLabel?: Record<string, TableOccupancy>
+    selectable?: boolean
+    selectedDiningTableIds?: string[]
+    availableDiningTableIds?: string[]
+    bookedDiningTableIds?: string[]
   }>(),
   {
     editable: false,
     selectedId: null,
     occupancyByLabel: undefined,
+    selectable: false,
+    selectedDiningTableIds: () => [],
+    availableDiningTableIds: () => [],
+    bookedDiningTableIds: () => [],
   },
 )
 
 const emit = defineEmits<{
   'update:tables': [tables: CanvasTable[]]
   select: [id: string]
+  'select-dining-table': [diningTableId: string]
 }>()
 
 const { t } = useI18n()
@@ -51,11 +60,54 @@ const statusClass: Record<FloorOccupancyStatus, string> = {
   ready: 'bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-300',
   serving: 'bg-violet-500/20 border-violet-500 text-violet-700 dark:text-violet-300',
   occupied: 'bg-rose-500/20 border-rose-500 text-rose-700 dark:text-rose-300',
+  reserved: 'bg-cyan-500/20 border-cyan-500 text-cyan-700 dark:text-cyan-300',
   completed: 'bg-muted border-border text-muted-foreground',
   cancelled: 'bg-muted border-border text-muted-foreground',
 }
 
 const showOccupancy = computed(() => props.occupancyByLabel !== undefined)
+
+const availableDiningTableIdSet = computed(() => new Set(props.availableDiningTableIds))
+const bookedDiningTableIdSet = computed(() => new Set(props.bookedDiningTableIds))
+const selectedDiningTableIdSet = computed(() => new Set(props.selectedDiningTableIds))
+
+function isBookingTableSelectable(table: CanvasTable) {
+  if (!props.selectable || table.kind !== 'table' || !table.dining_table_id) {
+    return false
+  }
+  return availableDiningTableIdSet.value.has(table.dining_table_id)
+}
+
+function isTableBookedForSlot(table: CanvasTable) {
+  return !!table.dining_table_id && bookedDiningTableIdSet.value.has(table.dining_table_id)
+}
+
+function bookingSelectionClass(table: CanvasTable) {
+  const diningTableId = table.dining_table_id
+  if (!diningTableId) {
+    return 'bg-muted/40 border-muted-foreground/30 text-muted-foreground opacity-60 cursor-not-allowed'
+  }
+  if (isTableBookedForSlot(table)) {
+    return 'bg-amber-500/15 border-amber-500 text-amber-800 dark:text-amber-300 opacity-80 cursor-not-allowed'
+  }
+  if (!availableDiningTableIdSet.value.has(diningTableId)) {
+    return 'bg-muted/40 border-muted-foreground/30 text-muted-foreground opacity-60 cursor-not-allowed'
+  }
+  if (selectedDiningTableIdSet.value.has(diningTableId)) {
+    return 'bg-primary/15 border-primary text-primary ring-2 ring-primary/40 cursor-pointer'
+  }
+  return 'bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 cursor-pointer hover:bg-emerald-500/25'
+}
+
+function bookingSelectionLabel(table: CanvasTable) {
+  if (!props.selectable || table.kind !== 'table' || !table.dining_table_id) {
+    return ''
+  }
+  if (isTableBookedForSlot(table)) {
+    return t('book.tableBooked')
+  }
+  return ''
+}
 
 function occupancyFor(table: CanvasTable): TableOccupancy | undefined {
   return props.occupancyByLabel?.[table.label.trim()]
@@ -67,6 +119,10 @@ function occupancyLabel(table: CanvasTable) {
 
   if (occupancy.status === 'occupied') {
     return t('floor.statusOccupied')
+  }
+
+  if (occupancy.status === 'reserved') {
+    return t('floor.statusReserved')
   }
 
   if (occupancy.queueNumber != null) {
@@ -91,6 +147,8 @@ function tableClass(table: CanvasTable) {
 
   if (isZone(table)) {
     classes.push('text-foreground')
+  } else if (props.selectable) {
+    classes.push(bookingSelectionClass(table))
   } else if (showOccupancy.value) {
     const occupancy = occupancyFor(table)
     classes.push(
@@ -154,6 +212,13 @@ function clamp(value: number, max: number) {
 }
 
 function onPointerDown(event: PointerEvent, table: CanvasTable) {
+  if (props.selectable) {
+    if (isBookingTableSelectable(table) && table.dining_table_id && !isTableBookedForSlot(table)) {
+      emit('select-dining-table', table.dining_table_id)
+    }
+    return
+  }
+
   emit('select', table.id)
 
   if (!props.editable) return
@@ -237,7 +302,13 @@ defineExpose({ canvasRef })
             {{ t('floor.seatsShort', { count: table.seats }) }}
           </span>
           <span
-            v-if="showOccupancy && occupancyLabel(table)"
+            v-if="selectable && bookingSelectionLabel(table)"
+            class="text-[10px] font-medium leading-tight"
+          >
+            {{ bookingSelectionLabel(table) }}
+          </span>
+          <span
+            v-else-if="showOccupancy && occupancyLabel(table)"
             class="text-[10px] font-medium leading-tight"
           >
             {{ occupancyLabel(table) }}

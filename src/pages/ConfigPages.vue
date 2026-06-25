@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ImageIcon, Landmark, LayoutGrid, Printer, QrCode, Trash2, Upload, Wallet } from '@lucide/vue'
+import { ImageIcon, Landmark, LayoutGrid, Printer, QrCode, Trash2, Upload, Wallet, CalendarDays } from '@lucide/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import MenuCategoryConfigList from '@/components/config/MenuCategoryConfigList.vue'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,7 @@ const isSavingTransfer = ref(false)
 const isSavingReceipt = ref(false)
 const isSavingPaymentFlow = ref(false)
 const isSavingMenuCategories = ref(false)
+const isSavingBooking = ref(false)
 const isUploadingQris = ref(false)
 const isRemovingQris = ref(false)
 const qrisPreview = ref<string | null>(null)
@@ -57,6 +58,15 @@ const paymentFlowForm = ref({
 
 const menuCategoryCustom = ref(false)
 const menuCategoryIds = ref<string[]>([])
+
+const bookingForm = ref({
+  enable_table_booking: false,
+  booking_duration_minutes: 120,
+  booking_advance_days_max: 30,
+  booking_open_time: '10:00',
+  booking_close_time: '22:00',
+  booking_auto_confirm: true,
+})
 const activeCategories = ref<ProductCategory[]>([])
 
 function applyConfig(config: ShopConfig | null) {
@@ -76,6 +86,14 @@ function applyConfig(config: ShopConfig | null) {
   }
   menuCategoryCustom.value = usesCustomMenuCategories(config)
   menuCategoryIds.value = config?.menu_category_ids ? [...config.menu_category_ids] : []
+  bookingForm.value = {
+    enable_table_booking: config?.enable_table_booking ?? false,
+    booking_duration_minutes: config?.booking_duration_minutes ?? 120,
+    booking_advance_days_max: config?.booking_advance_days_max ?? 30,
+    booking_open_time: (config?.booking_open_time ?? '10:00').slice(0, 5),
+    booking_close_time: (config?.booking_close_time ?? '22:00').slice(0, 5),
+    booking_auto_confirm: config?.booking_auto_confirm ?? true,
+  }
 }
 
 async function loadConfig() {
@@ -197,6 +215,22 @@ async function handleSavePaymentFlow() {
   }
 
   alertStore.showAlert(t('alert.success'), t('config.paymentFlowSaved'), 'success')
+}
+
+async function handleSaveBooking() {
+  isSavingBooking.value = true
+  const { error } = await updateShopConfig(bookingForm.value)
+  isSavingBooking.value = false
+
+  if (error) {
+    const message = typeof error === 'object' && 'message' in error
+      ? String(error.message)
+      : t('config.bookingSaveFailed')
+    alertStore.showAlert(t('alert.error'), message, 'error')
+    return
+  }
+
+  alertStore.showAlert(t('alert.success'), t('config.bookingSaved'), 'success')
 }
 
 async function handleSaveMenuCategories() {
@@ -339,6 +373,76 @@ onMounted(loadConfig)
 
               <Button type="submit" :disabled="isSavingPaymentFlow">
                 {{ isSavingPaymentFlow ? t('common.saving') : t('config.savePaymentFlow') }}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card class="lg:col-span-2">
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
+                <CalendarDays class="size-5" />
+              </div>
+              <div>
+                <CardTitle>{{ t('config.bookingTitle') }}</CardTitle>
+                <CardDescription>{{ t('config.bookingDesc') }}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form class="max-w-xl space-y-4" @submit.prevent="handleSaveBooking">
+              <div class="flex items-center justify-between rounded-lg border px-3 py-3">
+                <div>
+                  <p class="text-sm font-medium">{{ t('config.bookingEnable') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('config.bookingEnableDesc') }}</p>
+                </div>
+                <Switch v-model="bookingForm.enable_table_booking" />
+              </div>
+
+              <FieldGroup>
+                <Field>
+                  <FieldLabel for="booking-duration">{{ t('config.bookingDuration') }}</FieldLabel>
+                  <Input
+                    id="booking-duration"
+                    v-model.number="bookingForm.booking_duration_minutes"
+                    type="number"
+                    min="30"
+                    step="15"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel for="booking-advance">{{ t('config.bookingAdvanceDays') }}</FieldLabel>
+                  <Input
+                    id="booking-advance"
+                    v-model.number="bookingForm.booking_advance_days_max"
+                    type="number"
+                    min="1"
+                    max="90"
+                  />
+                </Field>
+                <div class="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel for="booking-open">{{ t('config.bookingOpenTime') }}</FieldLabel>
+                    <Input id="booking-open" v-model="bookingForm.booking_open_time" type="time" />
+                  </Field>
+                  <Field>
+                    <FieldLabel for="booking-close">{{ t('config.bookingCloseTime') }}</FieldLabel>
+                    <Input id="booking-close" v-model="bookingForm.booking_close_time" type="time" />
+                  </Field>
+                </div>
+              </FieldGroup>
+
+              <div class="flex items-center justify-between rounded-lg border px-3 py-3">
+                <div>
+                  <p class="text-sm font-medium">{{ t('config.bookingAutoConfirm') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('config.bookingAutoConfirmDesc') }}</p>
+                </div>
+                <Switch v-model="bookingForm.booking_auto_confirm" />
+              </div>
+
+              <Button type="submit" :disabled="isSavingBooking">
+                {{ isSavingBooking ? t('common.saving') : t('config.saveBooking') }}
               </Button>
             </form>
           </CardContent>

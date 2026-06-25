@@ -13,6 +13,7 @@ const OCCUPANCY_FILL: Record<FloorOccupancyStatus, string> = {
   ready: '#bbf7d0',
   serving: '#ddd6fe',
   occupied: '#fecdd3',
+  reserved: '#a5f3fc',
   completed: '#f3f4f6',
   cancelled: '#f3f4f6',
 }
@@ -23,6 +24,7 @@ const OCCUPANCY_STROKE: Record<FloorOccupancyStatus, string> = {
   ready: '#16a34a',
   serving: '#7c3aed',
   occupied: '#e11d48',
+  reserved: '#0891b2',
   completed: '#9ca3af',
   cancelled: '#9ca3af',
 }
@@ -66,7 +68,9 @@ function buildTableSvg(table: FloorTable, occupancy: TableOccupancy | undefined,
     ? `<text x="${cx}" y="${cy + 30}" text-anchor="middle" font-size="11" font-weight="bold" fill="${stroke}">#${occupancy.queueNumber}</text>`
     : occupancy?.status === 'occupied'
       ? `<text x="${cx}" y="${cy + 30}" text-anchor="middle" font-size="10" font-weight="bold" fill="${stroke}">${escapeHtml(translate('floor.statusOccupied'))}</text>`
-      : ''
+      : occupancy?.status === 'reserved'
+        ? `<text x="${cx}" y="${cy + 30}" text-anchor="middle" font-size="10" font-weight="bold" fill="${stroke}">${escapeHtml(translate('floor.statusReserved'))}</text>`
+        : ''
 
   return `
     ${shape}

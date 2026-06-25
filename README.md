@@ -35,8 +35,11 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 |-------|------------|
 | **Halaman publik (`/`)** | Pencarian pelanggan/produk, lihat hutang, instruksi pembayaran QRIS/transfer |
 | **Pesan online (`/order`)** | Pelanggan pilih menu, kirim pre-order (bayar nanti / bayar sekarang) tanpa login |
+| **Reservasi meja (`/book`)** | Pelanggan pilih tanggal/jam, meja, dan pre-order menu (reservasi terjadwal) |
+| **Sukses reservasi (`/book/success`)** | Konfirmasi meja, jadwal, dan ringkasan pre-order |
 | **Sukses pesanan (`/order/success`)** | Konfirmasi nomor pesanan + instruksi bayar di kasir setelah pre-order |
 | **Pesanan masuk (`/orders/inbox`)** | Staff memproses pre-order menjadi transaksi + antrian opsional |
+| **Reservasi (`/bookings`)** | Staff kelola booking: konfirmasi, check-in, batalkan |
 | **Master Produk** | CRUD produk, harga jual, harga beli default, stok awal, kategori |
 | **Master Kategori** | CRUD kategori produk |
 | **Master Pembeli** | CRUD pelanggan |
@@ -295,6 +298,10 @@ Semua skema SQL ada di folder [`DDL/`](DDL/). Nama file diawali angka urutan (`0
 | [`30-dining_tables.ddl`](DDL/30-dining_tables.ddl) | Master meja (`table_number`, `seats`, `is_active`) | — |
 | [`31-floor_tables_dining_table_fk.ddl`](DDL/31-floor_tables_dining_table_fk.ddl) | FK `dining_table_id` di denah + migrasi label meja lama | Butuh `30` |
 | [`32-dining_tables_owner_policies.ddl`](DDL/32-dining_tables_owner_policies.ddl) | RLS owner-only untuk master meja | Butuh `30` + `20` |
+| [`33-table_bookings.ddl`](DDL/33-table_bookings.ddl) | Reservasi meja terjadwal (`table_bookings`) | Butuh `30` |
+| [`34-pre_orders_booking_id.ddl`](DDL/34-pre_orders_booking_id.ddl) | Kolom `booking_id` di `pre_orders` | Butuh `33` + `15` |
+| [`35-shop_config_booking.ddl`](DDL/35-shop_config_booking.ddl) | Pengaturan reservasi di `shop_config` | Butuh `10` |
+| [`36-table_bookings_realtime.ddl`](DDL/36-table_bookings_realtime.ddl) | Realtime publication untuk `table_bookings` | Butuh `33` |
 
 ### 90–94 · Migrasi database lama (opsional)
 
@@ -385,7 +392,7 @@ Buka browser: `http://localhost:5173`
 
 | URL | Akses |
 |-----|-------|
-| `/`, `/order`, `/order/success`, `/queue/display` | Publik — tanpa login |
+| `/`, `/order`, `/order/success`, `/book`, `/book/success`, `/queue/display` | Publik — tanpa login |
 | `/login`, `/sign-up` | Guest |
 | `/dashboard`, `/profile`, `/transactions`, `/master/products`, dll. | Harus login |
 
@@ -423,12 +430,15 @@ vue-superbase-project/
 | `/` | Pencarian publik | — |
 | `/order` | Pesan menu (publik) | — |
 | `/order/success` | Konfirmasi pesanan + nomor antrian kasir (publik) | — |
+| `/book` | Reservasi meja + pre-order menu (publik) | — |
+| `/book/success` | Konfirmasi reservasi (publik) | — |
 | `/queue/display` | Layar antrian TV dapur (publik) | — |
 | `/login` | Login | — |
 | `/sign-up` | Daftar akun | — |
 | `/dashboard` | Dashboard ringkasan | Beranda |
 | `/profile` | Profil akun (nama, password, foto) | Akun (menu user) |
 | `/orders/inbox` | Pesanan masuk dari publik | Operasional |
+| `/bookings` | Reservasi meja — konfirmasi & check-in | Operasional |
 | `/transactions` | Buat transaksi | Operasional |
 | `/transactions/open` | Meja terbuka — tagih bon dine-in | Operasional |
 | `/transactions/list` | Daftar transaksi | Operasional |
@@ -976,9 +986,46 @@ Alur yang disarankan:
 |--------|------|
 | `inactive` | `is_active = false` di master (owner nonaktifkan meja) |
 | `occupied` | Ada bon terbuka hari ini atau antrian aktif dengan nomor meja yang sama |
+| `reserved` | Ada booking `pending`/`confirmed` hari ini yang belum check-in |
 | `available` | Meja aktif dan tidak terisi |
 
 Transaksi, antrian, dan pre-order tetap menyimpan `table_number` (teks) agar kompatibel dengan data lama; nilai diisi dari master saat dipilih dropdown.
+
+---
+
+## Reservasi Meja Terjadwal
+
+> **DDL:** Jalankan [`33-table_bookings.ddl`](DDL/33-table_bookings.ddl), [`34-pre_orders_booking_id.ddl`](DDL/34-pre_orders_booking_id.ddl), [`35-shop_config_booking.ddl`](DDL/35-shop_config_booking.ddl), dan [`36-table_bookings_realtime.ddl`](DDL/36-table_bookings_realtime.ddl). Aktifkan fitur di **Konfigurasi → Reservasi Meja**.
+
+```mermaid
+flowchart LR
+  Book["/book — pelanggan"]
+  TB[(table_bookings)]
+  PO[(pre_orders)]
+  Floor["Denah — reserved"]
+  Staff["/bookings — staff"]
+  CheckIn["checkInBooking"]
+  Queue["Antrian dapur"]
+  Occupied["Denah — occupied"]
+
+  Book --> TB
+  Book --> PO
+  TB --> Floor
+  Staff --> CheckIn
+  CheckIn --> Queue
+  CheckIn --> Occupied
+```
+
+| Langkah | Status / data | Halaman |
+|---------|---------------|---------|
+| Pelanggan booking + menu | `table_bookings` + `pre_orders` terhubung | `/book` |
+| Meja terblokir di slot | overlap `scheduled_at` + `duration_minutes` | — |
+| Denah hari ini | `reserved` (belum check-in) | `/floor-plan` |
+| Staff check-in | `checked_in`, buat transaksi + antrian dari pre-order | `/bookings` |
+| Tamu makan | antrian aktif → `occupied` di denah | `/queue` |
+| Bayar | meja kosong kembali | `/transactions/open` |
+
+**Perbedaan dengan `/order`:** `/order` untuk pesanan langsung hari ini; `/book` untuk reservasi terjadwal dengan pemilihan meja penuh dan pre-order menu.
 
 ---
 

@@ -21,7 +21,7 @@ import { canAccessPath } from '@/lib/permissions'
 import { useRoleStore } from '@/stores/useRoleStore'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from '@/composables/useI18n'
-import { BarChart3, ClipboardCheck, ClipboardList, Inbox, LayoutDashboard, LayoutGrid, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Shield, Tags, User, Users, UtensilsCrossed, Wallet } from '@lucide/vue'
+import { BarChart3, CalendarDays, ClipboardCheck, ClipboardList, Inbox, LayoutDashboard, LayoutGrid, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Shield, Tags, User, Users, UtensilsCrossed, Wallet } from '@lucide/vue'
 
 const userEmail = getCookie('_user_email')
 const userAvatar = ref<string | null>(null)
@@ -145,6 +145,14 @@ onUnmounted(() => {
                 <RouterLink to="/orders/inbox">
                   <Inbox />
                   <span>{{ t('nav.orderInbox') }}</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem v-if="canShow('/bookings')">
+              <SidebarMenuButton as-child>
+                <RouterLink to="/bookings">
+                  <CalendarDays />
+                  <span>{{ t('nav.bookings') }}</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

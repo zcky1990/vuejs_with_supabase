@@ -35,6 +35,7 @@ const isLoading = ref(true)
 const availabilityLabel: Record<TableAvailabilityStatus, string> = {
   available: 'master.availabilityAvailable',
   occupied: 'master.availabilityOccupied',
+  reserved: 'master.availabilityReserved',
   inactive: 'master.availabilityInactive',
 }
 

@@ -20,6 +20,7 @@ const legendItems = [
   { status: 'ready', class: 'bg-emerald-500/20 border-emerald-500' },
   { status: 'serving', class: 'bg-violet-500/20 border-violet-500' },
   { status: 'occupied', class: 'bg-rose-500/20 border-rose-500' },
+  { status: 'reserved', class: 'bg-cyan-500/20 border-cyan-500' },
 ] as const
 
 async function loadTables() {
@@ -54,6 +55,7 @@ function legendLabel(status: (typeof legendItems)[number]['status']) {
   if (status === 'ready') return t('status.ready')
   if (status === 'serving') return t('status.serving')
   if (status === 'occupied') return t('floor.legendOccupied')
+  if (status === 'reserved') return t('floor.legendReserved')
   return t('floor.legendFree')
 }
 

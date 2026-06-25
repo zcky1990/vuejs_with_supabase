@@ -45,6 +45,7 @@ const availabilityFilter = ref<AvailabilityFilter>('all')
 const availabilityClass: Record<TableAvailabilityStatus, string> = {
   available: 'text-emerald-600 dark:text-emerald-400',
   occupied: 'text-amber-600 dark:text-amber-400',
+  reserved: 'text-cyan-600 dark:text-cyan-400',
   inactive: 'text-muted-foreground',
 }
 
@@ -83,6 +84,7 @@ const {
 function availabilityLabel(status: TableAvailabilityStatus) {
   if (status === 'available') return t('master.availabilityAvailable')
   if (status === 'occupied') return t('master.availabilityOccupied')
+  if (status === 'reserved') return t('master.availabilityReserved')
   return t('master.availabilityInactive')
 }
 
@@ -176,6 +178,7 @@ onMounted(loadTables)
             <SelectItem value="all">{{ t('master.allAvailability') }}</SelectItem>
             <SelectItem value="available">{{ t('master.availabilityAvailable') }}</SelectItem>
             <SelectItem value="occupied">{{ t('master.availabilityOccupied') }}</SelectItem>
+            <SelectItem value="reserved">{{ t('master.availabilityReserved') }}</SelectItem>
             <SelectItem value="inactive">{{ t('master.availabilityInactive') }}</SelectItem>
           </SelectContent>
         </Select>

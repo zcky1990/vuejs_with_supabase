@@ -55,6 +55,24 @@ export const updateShopConfig = async (input: ShopConfigInput) => {
   if (input.menu_category_ids !== undefined) {
     payload.menu_category_ids = validated.data.menu_category_ids ?? null
   }
+  if (input.enable_table_booking !== undefined) {
+    payload.enable_table_booking = validated.data.enable_table_booking
+  }
+  if (input.booking_duration_minutes !== undefined) {
+    payload.booking_duration_minutes = validated.data.booking_duration_minutes
+  }
+  if (input.booking_advance_days_max !== undefined) {
+    payload.booking_advance_days_max = validated.data.booking_advance_days_max
+  }
+  if (input.booking_open_time !== undefined) {
+    payload.booking_open_time = validated.data.booking_open_time
+  }
+  if (input.booking_close_time !== undefined) {
+    payload.booking_close_time = validated.data.booking_close_time
+  }
+  if (input.booking_auto_confirm !== undefined) {
+    payload.booking_auto_confirm = validated.data.booking_auto_confirm
+  }
 
   const supabaseClient = supabase()
   const { data, error } = await supabaseClient
@@ -140,4 +158,18 @@ export function canEatFirst(config: ShopConfig | null) {
 
 export function requiresTableForEatFirst(config: ShopConfig | null) {
   return config?.require_table_for_eat_first !== false
+}
+
+export function isTableBookingEnabled(config: ShopConfig | null) {
+  return config?.enable_table_booking === true
+}
+
+export function getBookingDefaults(config: ShopConfig | null) {
+  return {
+    durationMinutes: config?.booking_duration_minutes ?? 120,
+    advanceDaysMax: config?.booking_advance_days_max ?? 30,
+    openTime: config?.booking_open_time ?? '10:00',
+    closeTime: config?.booking_close_time ?? '22:00',
+    autoConfirm: config?.booking_auto_confirm ?? true,
+  }
 }

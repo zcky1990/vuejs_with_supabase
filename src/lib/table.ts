@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getOccupiedTableNumbers } from './transaction'
+import { getReservedTableNumbersForToday } from './booking'
 import { diningTableSchema } from '@/schema/schema'
 import type {
   DiningTable,
@@ -22,6 +23,7 @@ function normalizeDiningTableInput(
 function resolveAvailabilityStatus(
   table: DiningTable,
   occupiedTableNumbers: Set<string>,
+  reservedTableNumbers: Set<string>,
 ): TableAvailabilityStatus {
   if (!table.is_active) {
     return 'inactive'
@@ -31,16 +33,21 @@ function resolveAvailabilityStatus(
     return 'occupied'
   }
 
+  if (reservedTableNumbers.has(table.table_number)) {
+    return 'reserved'
+  }
+
   return 'available'
 }
 
 function withAvailability(
   tables: DiningTable[],
   occupiedTableNumbers: Set<string>,
+  reservedTableNumbers: Set<string>,
 ): DiningTableWithAvailability[] {
   return tables.map((table) => ({
     ...table,
-    availability_status: resolveAvailabilityStatus(table, occupiedTableNumbers),
+    availability_status: resolveAvailabilityStatus(table, occupiedTableNumbers, reservedTableNumbers),
   }))
 }
 
@@ -55,17 +62,24 @@ export const getDiningTables = async () => {
 }
 
 export const getDiningTablesWithAvailability = async () => {
-  const [{ tables, error }, { occupiedTableNumbers, error: occupiedError }] = await Promise.all([
+  const [
+    { tables, error },
+    { occupiedTableNumbers, error: occupiedError },
+    { reservedByLabel, error: reservedError },
+  ] = await Promise.all([
     getDiningTables(),
     getOccupiedTableNumbers(),
+    getReservedTableNumbersForToday(),
   ])
 
-  if (error || occupiedError) {
-    return { tables: null, error: error ?? occupiedError }
+  if (error || occupiedError || reservedError) {
+    return { tables: null, error: error ?? occupiedError ?? reservedError }
   }
 
+  const reservedTableNumbers = new Set(Object.keys(reservedByLabel))
+
   return {
-    tables: withAvailability(tables ?? [], occupiedTableNumbers),
+    tables: withAvailability(tables ?? [], occupiedTableNumbers, reservedTableNumbers),
     error: null,
   }
 }

@@ -9,7 +9,7 @@ export type ProductCategory = {
 
 export type ProductCategoryInput = Omit<ProductCategory, 'id' | 'created_at' | 'updated_at'>
 
-export type TableAvailabilityStatus = 'available' | 'occupied' | 'inactive'
+export type TableAvailabilityStatus = 'available' | 'occupied' | 'reserved' | 'inactive'
 
 export type DiningTable = {
   id: string
@@ -230,6 +230,12 @@ export type ShopConfig = {
   payment_flow_mode: PaymentFlowMode
   require_table_for_eat_first: boolean
   menu_category_ids: string[] | null
+  enable_table_booking: boolean
+  booking_duration_minutes: number
+  booking_advance_days_max: number
+  booking_open_time: string
+  booking_close_time: string
+  booking_auto_confirm: boolean
   created_at: string
   updated_at: string
 }
@@ -244,6 +250,53 @@ export type ShopConfigInput = {
   payment_flow_mode?: PaymentFlowMode
   require_table_for_eat_first?: boolean
   menu_category_ids?: string[] | null
+  enable_table_booking?: boolean
+  booking_duration_minutes?: number
+  booking_advance_days_max?: number
+  booking_open_time?: string
+  booking_close_time?: string
+  booking_auto_confirm?: boolean
+}
+
+export type TableBookingStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'checked_in'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show'
+  | 'expired'
+
+export type TableBooking = {
+  id: string
+  dining_table_id: string
+  table_number: string
+  customer_name: string | null
+  customer_phone: string | null
+  party_size: number
+  scheduled_at: string
+  booking_date: string
+  duration_minutes: number
+  status: TableBookingStatus
+  pre_order_id: string | null
+  transaction_id: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type TableBookingWithDetails = TableBooking & {
+  pre_orders?: PreOrderWithDetails | null
+}
+
+export type CreateTableBookingInput = {
+  dining_table_ids: string[]
+  customer_name?: string | null
+  customer_phone?: string | null
+  party_size: number
+  scheduled_at: string
+  notes?: string | null
+  items: PreOrderItemInput[]
 }
 
 export type TableShape = 'round' | 'square'
@@ -290,7 +343,7 @@ export type TableOccupancy = {
   queueNumber?: number | null
 }
 
-export type FloorOccupancyStatus = QueueStatus | 'occupied'
+export type FloorOccupancyStatus = QueueStatus | 'occupied' | 'reserved'
 
 export type QueueStatus = 'waiting' | 'preparing' | 'ready' | 'serving' | 'completed' | 'cancelled'
 
@@ -332,6 +385,7 @@ export type PreOrder = {
   confirmed_payment_method: PaymentMethod | null
   total_amount: number
   transaction_id: string | null
+  booking_id: string | null
   created_at: string
   updated_at: string
 }
