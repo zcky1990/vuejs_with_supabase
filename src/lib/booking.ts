@@ -13,6 +13,8 @@ import type {
   TableBooking,
   TableBookingStatus,
   TableBookingWithDetails,
+  BookingCustomerGroup,
+  BookingNameSection,
 } from '@/types/database'
 import type { z } from 'zod'
 
@@ -316,6 +318,89 @@ export function formatBookingTableNumbers(tableNumbers: string[]) {
   return [...tableNumbers].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join(', ')
 }
 
+function bookingGroupKey(booking: TableBookingWithDetails) {
+  const name = booking.customer_name?.trim().toLowerCase() || '__anonymous__'
+  const reservationId = booking.pre_order_id ?? booking.id
+  return `${name}::${reservationId}`
+}
+
+export function groupBookingsByCustomer(bookings: TableBookingWithDetails[]): BookingCustomerGroup[] {
+  const groups = new Map<string, BookingCustomerGroup>()
+
+  for (const booking of bookings) {
+    const key = bookingGroupKey(booking)
+    const existing = groups.get(key)
+
+    if (!existing) {
+      groups.set(key, {
+        key,
+        customerName: booking.customer_name?.trim() ?? '',
+        customerPhone: booking.customer_phone,
+        bookings: [booking],
+        preOrder: booking.pre_orders ?? null,
+        scheduledAt: booking.scheduled_at,
+        partySize: booking.party_size,
+        status: booking.status,
+        tableNumbers: [booking.table_number],
+        notes: booking.notes,
+      })
+      continue
+    }
+
+    existing.bookings.push(booking)
+    if (!existing.tableNumbers.includes(booking.table_number)) {
+      existing.tableNumbers.push(booking.table_number)
+    }
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      tableNumbers: [...group.tableNumbers].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+      bookings: [...group.bookings].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true })),
+    }))
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+}
+
+export function groupBookingSections(groups: BookingCustomerGroup[]): BookingNameSection[] {
+  const sections = new Map<string, BookingNameSection>()
+
+  for (const group of groups) {
+    const customerKey = group.customerName.trim().toLowerCase() || '__anonymous__'
+    const existing = sections.get(customerKey)
+
+    if (!existing) {
+      sections.set(customerKey, {
+        customerKey,
+        customerName: group.customerName,
+        customerPhone: group.customerPhone,
+        groups: [group],
+        reservationCount: 1,
+      })
+      continue
+    }
+
+    existing.groups.push(group)
+    existing.reservationCount += 1
+    if (!existing.customerPhone && group.customerPhone) {
+      existing.customerPhone = group.customerPhone
+    }
+  }
+
+  return [...sections.values()]
+    .map((section) => ({
+      ...section,
+      groups: [...section.groups].sort(
+        (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+      ),
+    }))
+    .sort((a, b) => {
+      const aTime = new Date(a.groups[0]?.scheduledAt ?? 0).getTime()
+      const bTime = new Date(b.groups[0]?.scheduledAt ?? 0).getTime()
+      return aTime - bTime
+    })
+}
+
 export const createTableBookingWithPreOrder = async (input: CreateTableBookingInput) => {
   const validated = tableBookingCreateSchema().safeParse(input)
   if (!validated.success) {
@@ -527,7 +612,7 @@ export const cancelBooking = async (bookingId: string) => {
     return { bookings: null, error: fetchError ?? { message: translate('book.notFound') } }
   }
 
-  if (['completed', 'cancelled', 'no_show', 'expired'].includes(booking.status as string)) {
+  if (['checked_in', 'completed', 'cancelled', 'no_show', 'expired'].includes(booking.status as string)) {
     return { bookings: null, error: { message: translate('book.cannotCancel') } }
   }
 

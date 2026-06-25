@@ -36,6 +36,23 @@ export function formatShopDateTime(value: string | Date, locale = 'id') {
   }).format(date)
 }
 
+export function formatShopDate(value: string | Date, locale = 'id') {
+  const date = typeof value === 'string' ? new Date(value) : value
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    timeZone: SHOP_TIMEZONE,
+    dateStyle: 'medium',
+  }).format(date)
+}
+
+export function formatShopTime(value: string | Date, locale = 'id') {
+  const date = typeof value === 'string' ? new Date(value) : value
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    timeZone: SHOP_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 export function addDaysToShopDate(dateString: string, days: number) {
   const date = new Date(`${dateString}T12:00:00+07:00`)
   date.setUTCDate(date.getUTCDate() + days)

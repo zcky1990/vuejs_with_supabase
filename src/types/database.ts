@@ -289,6 +289,27 @@ export type TableBookingWithDetails = TableBooking & {
   pre_orders?: PreOrderWithDetails | null
 }
 
+export type BookingCustomerGroup = {
+  key: string
+  customerName: string
+  customerPhone: string | null
+  bookings: TableBookingWithDetails[]
+  preOrder: PreOrderWithDetails | null
+  scheduledAt: string
+  partySize: number
+  status: TableBookingStatus
+  tableNumbers: string[]
+  notes: string | null
+}
+
+export type BookingNameSection = {
+  customerKey: string
+  customerName: string
+  customerPhone: string | null
+  groups: BookingCustomerGroup[]
+  reservationCount: number
+}
+
 export type CreateTableBookingInput = {
   dining_table_ids: string[]
   customer_name?: string | null
