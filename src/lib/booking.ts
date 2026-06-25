@@ -643,6 +643,19 @@ export const cancelBooking = async (bookingId: string) => {
   return { bookings: data as TableBooking[], error: null }
 }
 
+export const completeBookingsForPaidTransaction = async (transactionId: string) => {
+  const supabaseClient = supabase()
+
+  const { data, error } = await supabaseClient
+    .from('table_bookings')
+    .update({ status: 'completed' })
+    .eq('transaction_id', transactionId)
+    .eq('status', 'checked_in')
+    .select()
+
+  return { bookings: data as TableBooking[] | null, error }
+}
+
 export const checkInBooking = async (bookingId: string) => {
   const supabaseClient = supabase()
 
@@ -693,10 +706,12 @@ export const checkInBooking = async (bookingId: string) => {
     return { bookings: null, transaction: null, queueNumber: null, error: processError }
   }
 
+  const bookingStatus = transaction.is_paid ? 'completed' : 'checked_in'
+
   const { data: updatedBookings, error: updateError } = await supabaseClient
     .from('table_bookings')
     .update({
-      status: 'checked_in',
+      status: bookingStatus,
       transaction_id: transaction.id,
     })
     .eq('pre_order_id', booking.pre_order_id)

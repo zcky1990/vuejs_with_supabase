@@ -510,6 +510,14 @@ export const markTransactionAsPaid = async (
     .select()
     .single()
 
+  if (!error && data) {
+    await supabaseClient
+      .from('table_bookings')
+      .update({ status: 'completed' })
+      .eq('transaction_id', transactionId)
+      .eq('status', 'checked_in')
+  }
+
   return { transaction: data as Transaction | null, error }
 }
 
