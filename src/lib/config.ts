@@ -52,6 +52,9 @@ export const updateShopConfig = async (input: ShopConfigInput) => {
   if (input.require_table_for_eat_first !== undefined) {
     payload.require_table_for_eat_first = validated.data.require_table_for_eat_first
   }
+  if (input.menu_category_ids !== undefined) {
+    payload.menu_category_ids = validated.data.menu_category_ids ?? null
+  }
 
   const supabaseClient = supabase()
   const { data, error } = await supabaseClient

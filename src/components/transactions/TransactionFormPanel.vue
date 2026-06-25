@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Plus } from '@lucide/vue'
+import MenuCategoryFilter from '@/components/menu/MenuCategoryFilter.vue'
 import { Button } from '@/components/ui/button'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useI18n } from '@/composables/useI18n'
 import { formatPrice } from '@/lib/format'
+import type { MenuCategoryOption } from '@/lib/menu-categories'
 import type { Customer, Product } from '@/types/database'
 import { WALK_IN_CUSTOMER_NAME } from '@/types/database'
 
@@ -22,9 +24,12 @@ defineProps<{
   requiresImmediatePayment?: boolean
   allowEatFirst?: boolean
   requireTableForEatFirst?: boolean
-  availableProducts: Product[]
+  menuCategories: MenuCategoryOption[]
+  filteredProducts: Product[]
   selectedProduct: Product | null
 }>()
+
+const categoryFilterModel = defineModel<string>('categoryFilter', { required: true })
 
 const { t } = useI18n()
 
@@ -96,7 +101,14 @@ function displayCustomerName(name: string) {
       </FieldGroup>
     </div>
 
-    <div class="rounded-xl border bg-background p-4">
+    <div class="rounded-xl border bg-background space-y-4 p-4">
+      <MenuCategoryFilter
+        v-if="menuCategories.length"
+        :categories="menuCategories"
+        :category-filter="categoryFilterModel"
+        @update:category-filter="categoryFilterModel = $event"
+      />
+
       <FieldGroup>
         <Field>
           <FieldLabel>{{ t('common.product') }}</FieldLabel>
@@ -106,7 +118,7 @@ function displayCustomerName(name: string) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem
-                v-for="product in availableProducts"
+                v-for="product in filteredProducts"
                 :key="product.id"
                 :value="product.id"
               >
@@ -117,7 +129,7 @@ function displayCustomerName(name: string) {
           <p v-if="selectedProduct" class="text-sm text-muted-foreground">
             {{ formatPrice(selectedProduct.price) }} · {{ t('common.stockAvailable', { quantity: selectedProduct.stock_quantity }) }}
           </p>
-          <p v-else-if="!availableProducts.length" class="text-sm text-muted-foreground">
+          <p v-else-if="!filteredProducts.length" class="text-sm text-muted-foreground">
             {{ t('transaction.noProducts') }}
           </p>
         </Field>
@@ -135,7 +147,7 @@ function displayCustomerName(name: string) {
           </Field>
           <Button
             class="shrink-0"
-            :disabled="!availableProducts.length"
+            :disabled="!filteredProducts.length"
             @click="emit('addProduct')"
           >
             <Plus class="size-4" />

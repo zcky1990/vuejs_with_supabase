@@ -144,6 +144,7 @@ export function shopConfigSchema() {
     transfer_account_holder: z.string().nullable().optional(),
     payment_flow_mode: z.enum(['pay_first_only', 'eat_first_only', 'both']).optional(),
     require_table_for_eat_first: z.boolean().optional(),
+    menu_category_ids: z.array(z.string().uuid()).nullable().optional(),
   })
 }
 

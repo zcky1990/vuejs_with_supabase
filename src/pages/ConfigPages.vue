@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ImageIcon, Landmark, Printer, QrCode, Trash2, Upload, Wallet } from '@lucide/vue'
+import { ImageIcon, Landmark, LayoutGrid, Printer, QrCode, Trash2, Upload, Wallet } from '@lucide/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import MenuCategoryConfigList from '@/components/config/MenuCategoryConfigList.vue'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -22,8 +23,10 @@ import {
 } from '@/components/ui/select'
 import { useI18n } from '@/composables/useI18n'
 import { getShopConfig, removeQrisImage, updateShopConfig, uploadQrisImage } from '@/lib/config'
+import { getActiveCategories } from '@/lib/category'
+import { usesCustomMenuCategories } from '@/lib/menu-categories'
 import { useAlertStore } from '@/stores/useAlertStore'
-import type { PaymentFlowMode, ShopConfig } from '@/types/database'
+import type { PaymentFlowMode, ProductCategory, ShopConfig } from '@/types/database'
 
 const { t } = useI18n()
 const alertStore = useAlertStore()
@@ -31,6 +34,7 @@ const isLoading = ref(true)
 const isSavingTransfer = ref(false)
 const isSavingReceipt = ref(false)
 const isSavingPaymentFlow = ref(false)
+const isSavingMenuCategories = ref(false)
 const isUploadingQris = ref(false)
 const isRemovingQris = ref(false)
 const qrisPreview = ref<string | null>(null)
@@ -51,6 +55,10 @@ const paymentFlowForm = ref({
   require_table_for_eat_first: true,
 })
 
+const menuCategoryCustom = ref(false)
+const menuCategoryIds = ref<string[]>([])
+const activeCategories = ref<ProductCategory[]>([])
+
 function applyConfig(config: ShopConfig | null) {
   qrisPreview.value = config?.qris_image_url ?? null
   transferForm.value = {
@@ -66,11 +74,16 @@ function applyConfig(config: ShopConfig | null) {
     payment_flow_mode: config?.payment_flow_mode ?? 'both',
     require_table_for_eat_first: config?.require_table_for_eat_first ?? true,
   }
+  menuCategoryCustom.value = usesCustomMenuCategories(config)
+  menuCategoryIds.value = config?.menu_category_ids ? [...config.menu_category_ids] : []
 }
 
 async function loadConfig() {
   isLoading.value = true
-  const { config, error } = await getShopConfig()
+  const [{ config, error }, categoriesResult] = await Promise.all([
+    getShopConfig(),
+    getActiveCategories(),
+  ])
   isLoading.value = false
 
   if (error) {
@@ -78,6 +91,11 @@ async function loadConfig() {
     return
   }
 
+  if (categoriesResult.error) {
+    alertStore.showAlert(t('alert.error'), categoriesResult.error.message, 'error')
+  }
+
+  activeCategories.value = categoriesResult.categories ?? []
   applyConfig(config)
 }
 
@@ -179,6 +197,42 @@ async function handleSavePaymentFlow() {
   }
 
   alertStore.showAlert(t('alert.success'), t('config.paymentFlowSaved'), 'success')
+}
+
+async function handleSaveMenuCategories() {
+  if (menuCategoryCustom.value && menuCategoryIds.value.length === 0) {
+    alertStore.showAlert(t('alert.warning'), t('config.menuCategorySelectMin'), 'error')
+    return
+  }
+
+  isSavingMenuCategories.value = true
+  const { error } = await updateShopConfig({
+    menu_category_ids: menuCategoryCustom.value ? menuCategoryIds.value : null,
+  })
+  isSavingMenuCategories.value = false
+
+  if (error) {
+    const message = typeof error === 'object' && 'message' in error
+      ? String(error.message)
+      : t('config.menuCategorySaveFailed')
+    alertStore.showAlert(t('alert.error'), message, 'error')
+    return
+  }
+
+  alertStore.showAlert(t('alert.success'), t('config.menuCategorySaved'), 'success')
+}
+
+function handleMenuCategoryCustomChange(enabled: boolean | 'indeterminate') {
+  const isEnabled = enabled === true
+  menuCategoryCustom.value = isEnabled
+  if (!isEnabled) {
+    menuCategoryIds.value = []
+    return
+  }
+
+  if (menuCategoryIds.value.length === 0) {
+    menuCategoryIds.value = activeCategories.value.map((category) => category.id)
+  }
 }
 
 onMounted(loadConfig)
@@ -285,6 +339,44 @@ onMounted(loadConfig)
 
               <Button type="submit" :disabled="isSavingPaymentFlow">
                 {{ isSavingPaymentFlow ? t('common.saving') : t('config.savePaymentFlow') }}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card class="lg:col-span-2">
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
+                <LayoutGrid class="size-5" />
+              </div>
+              <div>
+                <CardTitle>{{ t('config.menuCategoryTitle') }}</CardTitle>
+                <CardDescription>{{ t('config.menuCategoryDesc') }}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form class="max-w-2xl space-y-4" @submit.prevent="handleSaveMenuCategories">
+              <div class="flex items-center justify-between rounded-lg border px-3 py-3">
+                <div>
+                  <p class="text-sm font-medium">{{ t('config.menuCategoryCustom') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('config.menuCategoryCustomDesc') }}</p>
+                </div>
+                <Switch
+                  :model-value="menuCategoryCustom"
+                  @update:model-value="handleMenuCategoryCustomChange"
+                />
+              </div>
+
+              <MenuCategoryConfigList
+                v-if="menuCategoryCustom"
+                v-model:selected-ids="menuCategoryIds"
+                :categories="activeCategories"
+              />
+
+              <Button type="submit" :disabled="isSavingMenuCategories">
+                {{ isSavingMenuCategories ? t('common.saving') : t('config.saveMenuCategories') }}
               </Button>
             </form>
           </CardContent>

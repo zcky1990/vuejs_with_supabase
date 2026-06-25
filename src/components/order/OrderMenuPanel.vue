@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ImageIcon, Minus, Plus, Search } from '@lucide/vue'
+import MenuCategoryFilter from '@/components/menu/MenuCategoryFilter.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -42,26 +43,11 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div class="flex gap-2 overflow-x-auto pb-1">
-      <Button
-        size="sm"
-        :variant="categoryFilter === 'all' ? 'default' : 'outline'"
-        class="shrink-0 rounded-full"
-        @click="emit('update:categoryFilter', 'all')"
-      >
-        {{ t('common.all') }}
-      </Button>
-      <Button
-        v-for="category in categories"
-        :key="category.id"
-        size="sm"
-        :variant="categoryFilter === category.id ? 'default' : 'outline'"
-        class="shrink-0 rounded-full"
-        @click="emit('update:categoryFilter', category.id)"
-      >
-        {{ category.name }}
-      </Button>
-    </div>
+    <MenuCategoryFilter
+      :categories="categories"
+      :category-filter="categoryFilter"
+      @update:category-filter="emit('update:categoryFilter', $event)"
+    />
 
     <div v-if="isLoading" class="py-16 text-center text-sm text-muted-foreground">
       {{ t('order.loadingMenu') }}

@@ -12,6 +12,11 @@ import {
 import { formatPrice } from '@/lib/format'
 import { createPreOrder, formatPreOrderNumber } from '@/lib/pre-order'
 import { canEatFirst, canPayFirst, getShopConfig, requiresTableForEatFirst } from '@/lib/config'
+import {
+  buildMenuCategories,
+  filterProductsForMenu,
+  normalizeCategoryFilter,
+} from '@/lib/menu-categories'
 import { saveOrderSuccessPayload } from '@/lib/order-success'
 import { getProducts, getProductAddonsMap } from '@/lib/product'
 import { useAlertStore } from '@/stores/useAlertStore'
@@ -52,24 +57,25 @@ export function usePreOrderCart() {
   const requireTableForEatFirst = computed(() => requiresTableForEatFirst(shopConfig.value))
 
   const availableProducts = computed(() =>
-    products.value.filter((product) =>
-      product.stock_quantity > 0
-      && product.is_active
-      && !product.is_addons,
+    filterProductsForMenu(
+      products.value.filter((product) =>
+        product.stock_quantity > 0
+        && product.is_active
+        && !product.is_addons,
+      ),
+      shopConfig.value,
     ),
   )
 
-  const menuCategories = computed(() => {
-    const map = new Map<string, { id: string, name: string }>()
+  const menuCategories = computed(() =>
+    buildMenuCategories(
+      products.value.filter((product) => product.is_active && !product.is_addons),
+      shopConfig.value,
+    ),
+  )
 
-    for (const product of availableProducts.value) {
-      const category = product.product_categories
-      if (category) {
-        map.set(category.id, category)
-      }
-    }
-
-    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+  watch(menuCategories, (categories) => {
+    categoryFilter.value = normalizeCategoryFilter(categoryFilter.value, categories)
   })
 
   const filteredMenuProducts = computed(() => {

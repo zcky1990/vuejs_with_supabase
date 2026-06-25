@@ -48,7 +48,7 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 | **Restock** | Tambah stok per batch dengan harga beli & riwayat |
 | **Analisis** | Pendapatan, HPP FIFO, laba kotor, chart, ranking produk |
 | **Shift kasir (`/shifts`)** | Buka/tutup shift, saldo awal, penjualan per shift, selisih kas |
-| **Konfigurasi** | Upload QRIS, data rekening transfer, info struk toko, mode pembayaran dine-in |
+| **Konfigurasi** | Upload QRIS, data rekening transfer, info struk toko, mode pembayaran dine-in, kategori menu order |
 | **Profil (`/profile`)** | Ubah nama, password, foto profil (WEBP), bahasa & tema |
 | **Pengguna & Role (`/master/users`)** | Owner kelola akun dan role (owner/staff) |
 
@@ -291,6 +291,7 @@ Semua skema SQL ada di folder [`DDL/`](DDL/). Nama file diawali angka urutan (`0
 | [`26-order_queues_serving.ddl`](DDL/26-order_queues_serving.ddl) | Status antrian `serving` (mengantar ke meja) | — |
 | [`27-transactions_table_number.ddl`](DDL/27-transactions_table_number.ddl) | Kolom `table_number` di transaksi + index bon terbuka | — |
 | [`28-shop_config_payment_flow.ddl`](DDL/28-shop_config_payment_flow.ddl) | Mode pembayaran dine-in (`payment_flow_mode`) | — |
+| [`29-shop_config_menu_categories.ddl`](DDL/29-shop_config_menu_categories.ddl) | Kategori menu yang tampil di `/order` dan kasir (`menu_category_ids`) | — |
 
 ### 90–94 · Migrasi database lama (opsional)
 

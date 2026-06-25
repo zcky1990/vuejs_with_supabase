@@ -21,10 +21,12 @@ const {
   allowEatFirst,
   requireTableForEatFirst,
   tableNumber,
+  categoryFilter,
+  menuCategories,
   notes,
   selectedProductId,
   selectedProduct,
-  availableProducts,
+  filteredProducts,
   addQuantity,
   cart,
   pendingTransaction,
@@ -94,7 +96,9 @@ const {
           :requires-immediate-payment="requiresImmediatePayment"
           :allow-eat-first="allowEatFirst"
           :require-table-for-eat-first="requireTableForEatFirst"
-          :available-products="availableProducts"
+          v-model:category-filter="categoryFilter"
+          :menu-categories="menuCategories"
+          :filtered-products="filteredProducts"
           :selected-product="selectedProduct"
           @add-product="handleAddSelectedProduct"
         />

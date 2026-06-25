@@ -7,6 +7,11 @@ import { createQueueEntry } from '@/lib/queue'
 import { isWalkInCustomer } from '@/lib/customer'
 import { createTransaction, getCustomersForTransaction, getPendingTransactionForCustomer } from '@/lib/transaction'
 import { canEatFirst, canPayFirst, getShopConfig, requiresTableForEatFirst } from '@/lib/config'
+import {
+  buildMenuCategories,
+  filterProductsForMenu,
+  normalizeCategoryFilter,
+} from '@/lib/menu-categories'
 import { useAlertStore } from '@/stores/useAlertStore'
 import { useI18n } from '@/composables/useI18n'
 import type { Customer, PaymentMethod, Product, ShopConfig, Transaction } from '@/types/database'
@@ -45,6 +50,7 @@ export function useTransactionCart() {
   const paymentSuccessDialogOpen = ref(false)
   const paymentSuccessInvoice = ref<InvoiceData | null>(null)
   const tableNumber = ref('')
+  const categoryFilter = ref('all')
   const shopConfig = ref<ShopConfig | null>(null)
 
 const selectedCustomer = computed(() =>
@@ -67,11 +73,42 @@ const requiresImmediatePayment = computed(() => {
   )
 
   const availableProducts = computed(() =>
-    products.value.filter((product) =>
-      product.stock_quantity > 0
-      && !product.is_addons,
+    filterProductsForMenu(
+      products.value.filter((product) =>
+        product.stock_quantity > 0
+        && product.is_active
+        && !product.is_addons,
+      ),
+      shopConfig.value,
     ),
   )
+
+  const menuCategories = computed(() =>
+    buildMenuCategories(
+      products.value.filter((product) => product.is_active && !product.is_addons),
+      shopConfig.value,
+    ),
+  )
+
+  const filteredProducts = computed(() => {
+    if (categoryFilter.value === 'all') {
+      return availableProducts.value
+    }
+
+    return availableProducts.value.filter(
+      (product) => product.category_id === categoryFilter.value,
+    )
+  })
+
+  watch(menuCategories, (categories) => {
+    categoryFilter.value = normalizeCategoryFilter(categoryFilter.value, categories)
+  })
+
+  watch(filteredProducts, (products) => {
+    if (selectedProductId.value && !products.some((product) => product.id === selectedProductId.value)) {
+      selectedProductId.value = ''
+    }
+  })
 
   const pendingProductAddons = computed(() =>
     pendingProduct.value ? (productAddonsMap.value[pendingProduct.value.id] ?? []) : [],
@@ -566,10 +603,13 @@ const requiresImmediatePayment = computed(() => {
     allowEatFirst,
     requireTableForEatFirst,
     tableNumber,
+    categoryFilter,
+    menuCategories,
     notes,
     selectedProductId,
     selectedProduct,
     availableProducts,
+    filteredProducts,
     addQuantity,
     cart,
     pendingTransaction,

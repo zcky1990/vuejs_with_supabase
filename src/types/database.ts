@@ -212,6 +212,7 @@ export type ShopConfig = {
   transfer_account_holder: string | null
   payment_flow_mode: PaymentFlowMode
   require_table_for_eat_first: boolean
+  menu_category_ids: string[] | null
   created_at: string
   updated_at: string
 }
@@ -225,6 +226,7 @@ export type ShopConfigInput = {
   transfer_account_holder?: string | null
   payment_flow_mode?: PaymentFlowMode
   require_table_for_eat_first?: boolean
+  menu_category_ids?: string[] | null
 }
 
 export type TableShape = 'round' | 'square'
