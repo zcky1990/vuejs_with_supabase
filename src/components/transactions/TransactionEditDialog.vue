@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { Minus, Plus, Trash2 } from '@lucide/vue'
 import AddonSelectDialog from '@/components/transactions/AddonSelectDialog.vue'
+import ProductSearchSelect from '@/components/products/ProductSearchSelect.vue'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,13 +15,6 @@ import {
 } from '@/components/ui/dialog'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   buildCartLineKey,
@@ -489,21 +483,14 @@ async function handleSave() {
           <p class="mb-3 text-sm font-medium">{{ t('transaction.addProduct') }}</p>
           <FieldGroup>
             <Field>
-              <FieldLabel>{{ t('common.product') }}</FieldLabel>
-              <Select v-model="selectedProductId">
-                <SelectTrigger class="w-full">
-                  <SelectValue :placeholder="t('transaction.selectProduct')" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="product in availableProducts"
-                    :key="product.id"
-                    :value="product.id"
-                  >
-                    {{ product.name }} · {{ formatPrice(product.price) }} · {{ t('common.stockLabel', { quantity: product.stock_quantity }) }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <FieldLabel for="edit-transaction-product">{{ t('common.product') }}</FieldLabel>
+              <ProductSearchSelect
+                id="edit-transaction-product"
+                v-model="selectedProductId"
+                :products="availableProducts"
+                :placeholder="t('master.searchProduct')"
+                :disabled="!availableProducts.length"
+              />
             </Field>
 
             <div class="flex items-end gap-3">

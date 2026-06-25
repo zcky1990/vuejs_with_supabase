@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Plus } from '@lucide/vue'
 import MenuCategoryFilter from '@/components/menu/MenuCategoryFilter.vue'
+import ProductSearchSelect from '@/components/products/ProductSearchSelect.vue'
 import { Button } from '@/components/ui/button'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -111,21 +112,14 @@ function displayCustomerName(name: string) {
 
       <FieldGroup>
         <Field>
-          <FieldLabel>{{ t('common.product') }}</FieldLabel>
-          <Select v-model="selectedProductId">
-            <SelectTrigger class="w-full">
-              <SelectValue :placeholder="t('transaction.selectProduct')" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="product in filteredProducts"
-                :key="product.id"
-                :value="product.id"
-              >
-                {{ product.name }} · {{ formatPrice(product.price) }} · {{ t('common.stockLabel', { quantity: product.stock_quantity }) }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <FieldLabel for="transaction-product">{{ t('common.product') }}</FieldLabel>
+          <ProductSearchSelect
+            id="transaction-product"
+            v-model="selectedProductId"
+            :products="filteredProducts"
+            :placeholder="t('master.searchProduct')"
+            :disabled="!filteredProducts.length"
+          />
           <p v-if="selectedProduct" class="text-sm text-muted-foreground">
             {{ formatPrice(selectedProduct.price) }} · {{ t('common.stockAvailable', { quantity: selectedProduct.stock_quantity }) }}
           </p>
