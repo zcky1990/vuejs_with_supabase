@@ -9,22 +9,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Field, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import { useI18n } from '@/composables/useI18n'
-import { getShopConfig } from '@/lib/config'
+import { getShopConfig, isLoyaltyEnabled } from '@/lib/config'
+import { getCustomerById } from '@/lib/customer'
 import { formatPrice } from '@/lib/format'
-import type { PaymentMethod, ShopConfig, TransactionWithDetails } from '@/types/database'
+import {
+  buildLoyaltyPaymentPreview,
+  isLoyaltyEligibleCustomer,
+  maxRedeemablePoints,
+} from '@/lib/loyalty'
+import type { Customer, PaymentMethod, ShopConfig, TransactionWithDetails } from '@/types/database'
 
 const props = defineProps<{
   open: boolean
   transaction: TransactionWithDetails | null
   amount?: number
+  customer?: Customer | null
 }>()
 
 const { t } = useI18n()
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  select: [method: PaymentMethod]
+  select: [method: PaymentMethod, loyaltyPointsRedeemed?: number]
 }>()
 
 const paymentOptions = computed(() => [
@@ -35,21 +44,56 @@ const paymentOptions = computed(() => [
 
 const selectedMethod = ref<PaymentMethod | null>(null)
 const shopConfig = ref<ShopConfig | null>(null)
+const loyaltyCustomer = ref<Customer | null>(null)
 const isLoadingConfig = ref(false)
+const pointsToRedeem = ref(0)
 
-const displayAmount = computed(() =>
-  props.transaction?.total_amount ?? props.amount ?? 0,
+const grossAmount = computed(() =>
+  Number(props.transaction?.gross_amount ?? props.transaction?.total_amount ?? props.amount ?? 0),
+)
+
+const loyaltyPreview = computed(() =>
+  buildLoyaltyPaymentPreview(
+    loyaltyCustomer.value,
+    grossAmount.value,
+    pointsToRedeem.value,
+    shopConfig.value,
+  ),
+)
+
+const displayAmount = computed(() => loyaltyPreview.value?.finalTotal ?? grossAmount.value)
+
+const maxRedeemPoints = computed(() => {
+  if (!loyaltyCustomer.value || !shopConfig.value) return 0
+  return maxRedeemablePoints(
+    loyaltyCustomer.value.loyalty_points,
+    grossAmount.value,
+    shopConfig.value,
+  )
+})
+
+const showLoyaltySection = computed(() =>
+  isLoyaltyEnabled(shopConfig.value) && isLoyaltyEligibleCustomer(loyaltyCustomer.value),
 )
 
 function resetState() {
   selectedMethod.value = null
   shopConfig.value = null
+  loyaltyCustomer.value = null
+  pointsToRedeem.value = 0
 }
 
-async function loadShopConfig() {
+async function loadDialogData() {
   isLoadingConfig.value = true
-  const { config } = await getShopConfig()
+  const [{ config }, customerResult] = await Promise.all([
+    getShopConfig(),
+    props.transaction?.customer_id
+      ? getCustomerById(props.transaction.customer_id)
+      : Promise.resolve({ customer: props.customer ?? null, error: null }),
+  ])
   shopConfig.value = config
+  loyaltyCustomer.value = customerResult.customer
+  pointsToRedeem.value = 0
   isLoadingConfig.value = false
 }
 
@@ -70,14 +114,29 @@ function goBack() {
 
 function confirmPayment() {
   if (!selectedMethod.value) return
-  emit('select', selectedMethod.value)
+  emit('select', selectedMethod.value, loyaltyPreview.value?.pointsRedeemed ?? 0)
 }
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      loadDialogData()
+    }
+  },
+)
+
+watch(maxRedeemPoints, (maxPoints) => {
+  if (pointsToRedeem.value > maxPoints) {
+    pointsToRedeem.value = maxPoints
+  }
+})
 
 watch(
   () => selectedMethod.value,
   (method) => {
-    if (method === 'qris' || method === 'transfer') {
-      loadShopConfig()
+    if ((method === 'qris' || method === 'transfer') && !shopConfig.value) {
+      loadDialogData()
     }
   },
 )
@@ -94,6 +153,36 @@ watch(
           {{ t('payment.totalLabel') }} {{ formatPrice(displayAmount) }}
         </DialogDescription>
       </DialogHeader>
+
+      <div
+        v-if="showLoyaltySection && !selectedMethod"
+        class="space-y-3 rounded-xl border bg-muted/20 p-4"
+      >
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">{{ t('loyalty.pointsBalance') }}</span>
+          <span class="font-semibold">{{ loyaltyCustomer?.loyalty_points ?? 0 }} {{ t('loyalty.points') }}</span>
+        </div>
+        <Field>
+          <FieldLabel for="loyalty-redeem">{{ t('loyalty.redeemPoints') }}</FieldLabel>
+          <Input
+            id="loyalty-redeem"
+            v-model.number="pointsToRedeem"
+            type="number"
+            min="0"
+            :max="maxRedeemPoints"
+            step="1"
+          />
+        </Field>
+        <p class="text-xs text-muted-foreground">
+          {{ t('loyalty.maxRedeemable', { count: maxRedeemPoints }) }}
+        </p>
+        <p v-if="loyaltyPreview?.discountAmount" class="text-sm text-emerald-700 dark:text-emerald-300">
+          {{ t('loyalty.discount') }}: -{{ formatPrice(loyaltyPreview.discountAmount) }}
+        </p>
+        <p v-if="loyaltyPreview?.pointsEarned" class="text-xs text-muted-foreground">
+          {{ t('loyalty.earnOnPayment', { count: loyaltyPreview.pointsEarned }) }}
+        </p>
+      </div>
 
       <div v-if="!selectedMethod" class="grid gap-3">
         <button

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Pencil, Plus, Trash2 } from '@lucide/vue'
+import { History, Pencil, Plus, Trash2 } from '@lucide/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CustomerFormDialog from '@/components/masterdata/CustomerFormDialog.vue'
+import CustomerPointHistoryDialog from '@/components/masterdata/CustomerPointHistoryDialog.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +38,7 @@ const alertStore = useAlertStore()
 const customers = ref<Customer[]>([])
 const isLoading = ref(true)
 const dialogOpen = ref(false)
+const historyDialogOpen = ref(false)
 const selectedCustomer = ref<Customer | null>(null)
 const searchQuery = ref('')
 const statusFilter = ref<StatusFilter>('all')
@@ -108,6 +110,11 @@ function openEditDialog(customer: Customer) {
   dialogOpen.value = true
 }
 
+function openHistoryDialog(customer: Customer) {
+  selectedCustomer.value = customer
+  historyDialogOpen.value = true
+}
+
 async function handleDelete(customer: Customer) {
   if (!confirm(t('master.deleteCustomerConfirm', { name: customer.name }))) return
 
@@ -168,18 +175,20 @@ onMounted(loadCustomers)
               <TableHead>{{ t('master.email') }}</TableHead>
               <TableHead>{{ t('master.phone') }}</TableHead>
               <TableHead>{{ t('master.address') }}</TableHead>
+              <TableHead>{{ t('loyalty.member') }}</TableHead>
+              <TableHead>{{ t('loyalty.points') }}</TableHead>
               <TableHead>{{ t('common.status') }}</TableHead>
               <TableHead v-if="roleStore.isOwner" class="text-right">{{ t('common.actions') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-if="isLoading">
-              <TableCell :colspan="roleStore.isOwner ? 6 : 5" class="text-center text-muted-foreground">
+              <TableCell :colspan="roleStore.isOwner ? 8 : 7" class="text-center text-muted-foreground">
                 {{ t('common.loading') }}
               </TableCell>
             </TableRow>
             <TableRow v-else-if="!filteredCustomers.length">
-              <TableCell :colspan="roleStore.isOwner ? 6 : 5" class="text-center text-muted-foreground">
+              <TableCell :colspan="roleStore.isOwner ? 8 : 7" class="text-center text-muted-foreground">
                 {{ customers.length ? t('master.noCustomerFilterMatch') : t('master.noCustomer') }}
               </TableCell>
             </TableRow>
@@ -188,9 +197,19 @@ onMounted(loadCustomers)
               <TableCell>{{ customer.email || '-' }}</TableCell>
               <TableCell>{{ customer.phone || '-' }}</TableCell>
               <TableCell>{{ customer.address || '-' }}</TableCell>
+              <TableCell>{{ customer.is_member ? t('loyalty.member') : '-' }}</TableCell>
+              <TableCell>{{ customer.is_member ? customer.loyalty_points : '-' }}</TableCell>
               <TableCell>{{ customer.is_active ? t('common.active') : t('common.inactive') }}</TableCell>
               <TableCell v-if="roleStore.isOwner" class="text-right">
                 <div class="flex justify-end gap-2">
+                  <Button
+                    v-if="customer.is_member"
+                    size="icon-sm"
+                    variant="outline"
+                    @click="openHistoryDialog(customer)"
+                  >
+                    <History class="size-4" />
+                  </Button>
                   <Button size="icon-sm" variant="outline" @click="openEditDialog(customer)">
                     <Pencil class="size-4" />
                   </Button>
@@ -222,6 +241,11 @@ onMounted(loadCustomers)
         v-model:open="dialogOpen"
         :customer="selectedCustomer"
         @saved="loadCustomers"
+      />
+
+      <CustomerPointHistoryDialog
+        v-model:open="historyDialogOpen"
+        :customer="selectedCustomer"
       />
     </div>
   </DashboardLayout>

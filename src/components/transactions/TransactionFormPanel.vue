@@ -75,6 +75,12 @@ function displayCustomerName(name: string) {
             {{ selectedCustomer.phone || selectedCustomer.email || selectedCustomer.address || t('common.noContact') }}
           </p>
           <p
+            v-if="selectedCustomer?.is_member"
+            class="text-sm font-medium text-primary"
+          >
+            {{ t('loyalty.member') }} · {{ selectedCustomer.loyalty_points }} {{ t('loyalty.points') }}
+          </p>
+          <p
             v-if="requiresImmediatePayment && allowEatFirst"
             class="text-sm text-amber-600 dark:text-amber-400"
           >

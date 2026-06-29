@@ -90,12 +90,16 @@ function openCancelDialog(transaction: TransactionWithDetails) {
   cancelDialogOpen.value = true
 }
 
-async function handlePayment(method: PaymentMethod) {
+async function handlePayment(method: PaymentMethod, loyaltyPointsRedeemed = 0) {
   if (!selectedTransaction.value) return
 
   const transactionSnapshot = selectedTransaction.value
   isPaying.value = true
-  const { transaction, error } = await markTransactionAsPaid(transactionSnapshot.id, method)
+  const { transaction, error } = await markTransactionAsPaid(
+    transactionSnapshot.id,
+    method,
+    { loyaltyPointsRedeemed },
+  )
   isPaying.value = false
   paymentDialogOpen.value = false
 

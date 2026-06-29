@@ -75,11 +75,15 @@ function openPayDialog(transaction: OpenTableTransaction) {
   paymentDialogOpen.value = true
 }
 
-async function handlePay(method: PaymentMethod) {
+async function handlePay(method: PaymentMethod, loyaltyPointsRedeemed = 0) {
   if (!payingTransaction.value) return
 
   isPaying.value = true
-  const { transaction, error } = await markTransactionAsPaid(payingTransaction.value.id, method)
+  const { transaction, error } = await markTransactionAsPaid(
+    payingTransaction.value.id,
+    method,
+    { loyaltyPointsRedeemed },
+  )
   isPaying.value = false
   paymentDialogOpen.value = false
 

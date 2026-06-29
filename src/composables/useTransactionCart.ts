@@ -374,9 +374,10 @@ const requiresImmediatePayment = computed(() => {
     }
   }
 
-  function getCreateOptions(paymentMethod?: PaymentMethod) {
+  function getCreateOptions(paymentMethod?: PaymentMethod, loyaltyPointsRedeemed?: number) {
     return {
       ...(paymentMethod ? { paymentMethod } : {}),
+      ...(loyaltyPointsRedeemed ? { loyaltyPointsRedeemed } : {}),
       table_number: tableNumber.value.trim() || null,
       paymentFlowMode: shopConfig.value?.payment_flow_mode,
       requireTableForEatFirst: shopConfig.value?.require_table_for_eat_first,
@@ -562,14 +563,14 @@ const requiresImmediatePayment = computed(() => {
     paymentSuccessDialogOpen.value = true
   }
 
-  async function handlePayment(method: PaymentMethod) {
+  async function handlePayment(method: PaymentMethod, loyaltyPointsRedeemed = 0) {
     isSubmitting.value = true
     const addToQueue = paymentWithQueue.value
     const tableNumber = pendingTableNumber.value
 
     const { transaction, error } = await createTransaction(
       getTransactionPayload(),
-      getCreateOptions(method),
+      getCreateOptions(method, loyaltyPointsRedeemed),
     )
 
     if (error) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ImageIcon, Landmark, LayoutGrid, Printer, QrCode, Trash2, Upload, Wallet, CalendarDays } from '@lucide/vue'
+import { ImageIcon, Landmark, LayoutGrid, Printer, QrCode, Trash2, Upload, Wallet, CalendarDays, Gift } from '@lucide/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import MenuCategoryConfigList from '@/components/config/MenuCategoryConfigList.vue'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ const isSavingReceipt = ref(false)
 const isSavingPaymentFlow = ref(false)
 const isSavingMenuCategories = ref(false)
 const isSavingBooking = ref(false)
+const isSavingLoyalty = ref(false)
 const isUploadingQris = ref(false)
 const isRemovingQris = ref(false)
 const qrisPreview = ref<string | null>(null)
@@ -67,6 +68,12 @@ const bookingForm = ref({
   booking_close_time: '22:00',
   booking_auto_confirm: true,
 })
+
+const loyaltyForm = ref({
+  loyalty_enabled: false,
+  loyalty_points_per_transaction: 0,
+  loyalty_point_redeem_value: 0,
+})
 const activeCategories = ref<ProductCategory[]>([])
 
 function applyConfig(config: ShopConfig | null) {
@@ -93,6 +100,11 @@ function applyConfig(config: ShopConfig | null) {
     booking_open_time: (config?.booking_open_time ?? '10:00').slice(0, 5),
     booking_close_time: (config?.booking_close_time ?? '22:00').slice(0, 5),
     booking_auto_confirm: config?.booking_auto_confirm ?? true,
+  }
+  loyaltyForm.value = {
+    loyalty_enabled: config?.loyalty_enabled ?? false,
+    loyalty_points_per_transaction: config?.loyalty_points_per_transaction ?? 0,
+    loyalty_point_redeem_value: Number(config?.loyalty_point_redeem_value ?? 0),
   }
 }
 
@@ -231,6 +243,22 @@ async function handleSaveBooking() {
   }
 
   alertStore.showAlert(t('alert.success'), t('config.bookingSaved'), 'success')
+}
+
+async function handleSaveLoyalty() {
+  isSavingLoyalty.value = true
+  const { error } = await updateShopConfig(loyaltyForm.value)
+  isSavingLoyalty.value = false
+
+  if (error) {
+    const message = typeof error === 'object' && 'message' in error
+      ? String(error.message)
+      : t('config.loyaltySaveFailed')
+    alertStore.showAlert(t('alert.error'), message, 'error')
+    return
+  }
+
+  alertStore.showAlert(t('alert.success'), t('config.loyaltySaved'), 'success')
 }
 
 async function handleSaveMenuCategories() {
@@ -443,6 +471,59 @@ onMounted(loadConfig)
 
               <Button type="submit" :disabled="isSavingBooking">
                 {{ isSavingBooking ? t('common.saving') : t('config.saveBooking') }}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 items-center justify-center rounded-lg bg-foreground text-background">
+                <Gift class="size-5" />
+              </div>
+              <div>
+                <CardTitle>{{ t('config.loyaltyTitle') }}</CardTitle>
+                <CardDescription>{{ t('config.loyaltyDesc') }}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form class="max-w-xl space-y-4" @submit.prevent="handleSaveLoyalty">
+              <div class="flex items-center justify-between rounded-lg border px-3 py-3">
+                <div>
+                  <p class="text-sm font-medium">{{ t('config.loyaltyEnable') }}</p>
+                  <p class="text-xs text-muted-foreground">{{ t('config.loyaltyEnableDesc') }}</p>
+                </div>
+                <Switch v-model="loyaltyForm.loyalty_enabled" />
+              </div>
+
+              <Field>
+                <FieldLabel for="loyalty-points-per-tx">{{ t('config.loyaltyPointsPerTransaction') }}</FieldLabel>
+                <Input
+                  id="loyalty-points-per-tx"
+                  v-model.number="loyaltyForm.loyalty_points_per_transaction"
+                  type="number"
+                  min="0"
+                  step="1"
+                  :disabled="!loyaltyForm.loyalty_enabled"
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel for="loyalty-point-value">{{ t('config.loyaltyPointRedeemValue') }}</FieldLabel>
+                <Input
+                  id="loyalty-point-value"
+                  v-model.number="loyaltyForm.loyalty_point_redeem_value"
+                  type="number"
+                  min="0"
+                  step="100"
+                  :disabled="!loyaltyForm.loyalty_enabled"
+                />
+              </Field>
+
+              <Button type="submit" :disabled="isSavingLoyalty">
+                {{ isSavingLoyalty ? t('common.saving') : t('config.saveLoyalty') }}
               </Button>
             </form>
           </CardContent>

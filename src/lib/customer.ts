@@ -16,6 +16,7 @@ function normalizeCustomerInput(input: z.infer<ReturnType<typeof customerSchema>
     address: input.address ?? null,
     notes: input.notes ?? null,
     is_active: input.is_active,
+    is_member: input.is_member,
   }
 }
 
@@ -29,6 +30,17 @@ export const getCustomerByName = async (name: string) => {
   const supabaseClient = supabase()
   const { data, error } = await supabaseClient.from('customers').select('*').ilike('name', `%${name}%`)
   return { customers: data as Customer[] | null, error }
+}
+
+export const getCustomerById = async (id: string) => {
+  const supabaseClient = supabase()
+  const { data, error } = await supabaseClient
+    .from('customers')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  return { customer: data as Customer | null, error }
 }
 
 export const createCustomer = async (customer: CustomerInput) => {

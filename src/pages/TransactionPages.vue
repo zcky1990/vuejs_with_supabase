@@ -124,6 +124,7 @@ const {
         v-model:open="paymentDialogOpen"
         :transaction="null"
         :amount="totalAmount"
+        :customer="selectedCustomer"
         @select="handlePayment"
       />
 

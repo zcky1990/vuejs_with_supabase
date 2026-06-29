@@ -14,9 +14,11 @@ import { applyStockDelta, recordSaleStock, recordStockReturn, restoreTransaction
 import { cancelQueueByTransactionId } from './queue'
 import { canEatFirst, canPayFirst, getShopConfig, requiresTableForEatFirst } from './config'
 import { resolveOpenShiftIdForCurrentUser } from './shift'
+import { applyLoyaltyOnPayment, reverseLoyaltyForCancelledTransaction } from './loyalty'
 import type {
   Customer,
   CreateTransactionOptions,
+  MarkTransactionAsPaidOptions,
   PaymentMethod,
   Transaction,
   TransactionEventWithPerformer,
@@ -298,7 +300,10 @@ async function mergeIntoTransaction(
     return { transaction: null, merged: true, error: totalError }
   }
 
-  const updatePayload: { total_amount: number, notes?: string } = { total_amount: totalAmount }
+  const updatePayload: { total_amount: number, gross_amount: number, notes?: string } = {
+    total_amount: totalAmount,
+    gross_amount: totalAmount,
+  }
   if (notes) {
     updatePayload.notes = notes
   }
@@ -481,11 +486,12 @@ export const getCustomersWithDebt = async (customerIds: string[]) => {
 export const markTransactionAsPaid = async (
   transactionId: string,
   paymentMethod: PaymentMethod,
+  options?: MarkTransactionAsPaidOptions,
 ) => {
   const supabaseClient = supabase()
   const { data: existing, error: fetchError } = await supabaseClient
     .from('transactions')
-    .select('status')
+    .select('status, customer_id, total_amount, gross_amount')
     .eq('id', transactionId)
     .single()
 
@@ -495,6 +501,18 @@ export const markTransactionAsPaid = async (
 
   if (!isActiveTransaction(existing as Pick<Transaction, 'status'>)) {
     return { transaction: null, error: { message: useLocaleStore().translate('error.transactionAlreadyCancelled') } }
+  }
+
+  const grossAmount = Number(existing.gross_amount ?? existing.total_amount)
+  const { error: loyaltyError } = await applyLoyaltyOnPayment({
+    transactionId,
+    customerId: existing.customer_id,
+    grossAmount,
+    pointsToRedeem: options?.loyaltyPointsRedeemed ?? 0,
+  })
+
+  if (loyaltyError) {
+    return { transaction: null, error: loyaltyError }
   }
 
   const shiftId = await resolveOpenShiftIdForCurrentUser()
@@ -561,6 +579,8 @@ export const cancelTransaction = async (
       is_paid,
       payment_method,
       total_amount,
+      loyalty_points_earned,
+      loyalty_points_redeemed,
       transaction_items (
         id,
         product_id,
@@ -618,6 +638,13 @@ export const cancelTransaction = async (
 
   if (updateError || !transaction) {
     return { transaction: null, error: updateError }
+  }
+
+  if (transactionRow.is_paid) {
+    const { error: loyaltyReverseError } = await reverseLoyaltyForCancelledTransaction(transactionId)
+    if (loyaltyReverseError) {
+      return { transaction: transaction as Transaction, error: loyaltyReverseError }
+    }
   }
 
   const { error: eventError } = await insertTransactionEvent(transactionId, 'cancelled', {
@@ -1020,6 +1047,7 @@ export const createTransaction = async (
     .from('transactions')
     .insert({
       customer_id: payload.customer_id,
+      gross_amount: totalAmount,
       total_amount: totalAmount,
       is_paid: payImmediately,
       payment_method: payImmediately ? options!.paymentMethod! : null,
@@ -1071,6 +1099,37 @@ export const createTransaction = async (
     await supabaseClient.from('transaction_items').delete().eq('transaction_id', transaction.id)
     await supabaseClient.from('transactions').delete().eq('id', transaction.id)
     return { transaction: null, merged: false, error: stockError }
+  }
+
+  if (payImmediately) {
+    const { error: loyaltyError } = await applyLoyaltyOnPayment({
+      transactionId: transaction.id,
+      customerId: payload.customer_id,
+      grossAmount: totalAmount,
+      pointsToRedeem: options?.loyaltyPointsRedeemed ?? 0,
+    })
+
+    if (loyaltyError) {
+      await supabaseClient.from('transaction_items').delete().eq('transaction_id', transaction.id)
+      await supabaseClient.from('transactions').delete().eq('id', transaction.id)
+      return { transaction: null, merged: false, error: loyaltyError }
+    }
+
+    const { data: paidTransaction, error: reloadError } = await supabaseClient
+      .from('transactions')
+      .select()
+      .eq('id', transaction.id)
+      .single()
+
+    if (reloadError || !paidTransaction) {
+      return { transaction: transaction as Transaction, merged: false, error: reloadError }
+    }
+
+    return {
+      transaction: paidTransaction as Transaction,
+      merged: false,
+      error: null,
+    }
   }
 
   return {

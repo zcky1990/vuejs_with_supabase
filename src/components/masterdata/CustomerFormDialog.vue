@@ -27,6 +27,7 @@ type CustomerFormState = {
   address: string
   notes: string
   is_active: boolean
+  is_member: boolean
 }
 
 const props = defineProps<{
@@ -51,6 +52,7 @@ const defaultForm = (): CustomerFormState => ({
   address: '',
   notes: '',
   is_active: true,
+  is_member: false,
 })
 
 const form = ref<CustomerFormState>(defaultForm())
@@ -69,6 +71,7 @@ watch(
           address: props.customer.address ?? '',
           notes: props.customer.notes ?? '',
           is_active: props.customer.is_active,
+          is_member: props.customer.is_member,
         }
       : defaultForm()
   },
@@ -93,6 +96,7 @@ async function handleSubmit() {
     address: form.value.address || null,
     notes: form.value.notes || null,
     is_active: form.value.is_active,
+    is_member: form.value.is_member,
   }
 
   const result = props.customer
@@ -161,6 +165,14 @@ async function handleSubmit() {
             <FieldLabel for="customer-notes">{{ t('common.notes') }}</FieldLabel>
             <Textarea id="customer-notes" v-model="form.notes" :placeholder="t('master.customerNotesPh')" rows="2" />
           </Field>
+
+          <div class="flex items-center justify-between rounded-lg border p-4">
+            <div class="space-y-0.5">
+              <Label for="customer-member">{{ t('master.isMember') }}</Label>
+              <p class="text-xs text-muted-foreground">{{ t('master.isMemberHint') }}</p>
+            </div>
+            <Switch id="customer-member" v-model="form.is_member" />
+          </div>
 
           <div class="flex items-center justify-between rounded-lg border p-4">
             <div class="space-y-0.5">

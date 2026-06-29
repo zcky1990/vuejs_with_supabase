@@ -25,7 +25,8 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
       - [Kasir — Makan Dulu, Bayar Nanti](#92-kasir--makan-dulu-bayar-nanti)
       - [QR Pre-order — Bayar Sekarang (pay_now)](#93-qr-pre-order--bayar-sekarang-pay_now)
       - [QR Pre-order — Makan Dulu (pay_later)](#94-qr-pre-order--makan-dulu-pay_later)
-14. [Troubleshooting](#troubleshooting)
+14. [Membership & Poin Loyalitas](#membership--poin-loyalitas)
+15. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -42,7 +43,7 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 | **Reservasi (`/bookings`)** | Staff kelola booking: konfirmasi, check-in, batalkan |
 | **Master Produk** | CRUD produk, harga jual, harga beli default, stok awal, kategori |
 | **Master Kategori** | CRUD kategori produk |
-| **Master Pembeli** | CRUD pelanggan |
+| **Master Pembeli** | CRUD pelanggan, status member, saldo & riwayat poin loyalitas |
 | **Transaksi** | Buat penjualan, bayar / makan dulu (hutang), antrian opsional |
 | **Meja Terbuka (`/transactions/open`)** | Daftar bon dine-in belum lunas — tagih setelah pelanggan selesai makan |
 | **Daftar Transaksi** | Filter lunas/hutang, edit qty item |
@@ -51,7 +52,7 @@ Aplikasi web untuk mengelola produk, pelanggan, transaksi penjualan, antrian pes
 | **Restock** | Tambah stok per batch dengan harga beli & riwayat |
 | **Analisis** | Pendapatan, HPP FIFO, laba kotor, chart, ranking produk |
 | **Shift kasir (`/shifts`)** | Buka/tutup shift, saldo awal, penjualan per shift, selisih kas |
-| **Konfigurasi** | Upload QRIS, data rekening transfer, info struk toko, mode pembayaran dine-in, kategori menu order |
+| **Konfigurasi** | Upload QRIS, data rekening transfer, info struk toko, mode pembayaran dine-in, kategori menu order, reservasi meja, program loyalitas |
 | **Profil (`/profile`)** | Ubah nama, password, foto profil (WEBP), bahasa & tema |
 | **Pengguna & Role (`/master/users`)** | Owner kelola akun dan role (owner/staff) |
 
@@ -304,6 +305,10 @@ Semua skema SQL ada di folder [`DDL/`](DDL/). Nama file diawali angka urutan (`0
 | [`36-table_bookings_realtime.ddl`](DDL/36-table_bookings_realtime.ddl) | Realtime publication untuk `table_bookings` | Butuh `33` |
 | [`37-transactions_realtime.ddl`](DDL/37-transactions_realtime.ddl) | Realtime publication untuk `transactions` (denah meja) | — |
 | [`38-pre_order_items_staff_policies.ddl`](DDL/38-pre_order_items_staff_policies.ddl) | Staff dapat ubah item pre-order di inbox | Butuh `15` |
+| [`39-customers_membership.ddl`](DDL/39-customers_membership.ddl) | Kolom `is_member`, `loyalty_points` di `customers` | — |
+| [`40-shop_config_loyalty.ddl`](DDL/40-shop_config_loyalty.ddl) | Pengaturan program loyalitas di `shop_config` | Butuh `10` |
+| [`41-customer_loyalty_ledger.ddl`](DDL/41-customer_loyalty_ledger.ddl) | Riwayat perubahan poin (`customer_point_ledger`) | Butuh `39` |
+| [`42-transactions_loyalty.ddl`](DDL/42-transactions_loyalty.ddl) | Kolom diskon & poin di `transactions` (`gross_amount`, dll.) | — |
 
 ### 90–94 · Migrasi database lama (opsional)
 
@@ -333,12 +338,12 @@ where table_schema = 'public'
   and table_name in (
     'customers', 'profiles', 'products', 'transactions', 'transaction_items',
     'shop_config', 'order_queues', 'pre_orders', 'pre_order_items', 'pre_order_item_addons',
-    'stock_movements', 'stock_lot_allocations'
+    'stock_movements', 'stock_lot_allocations', 'customer_point_ledger'
   )
 order by table_name;
 ```
 
-Harus mengembalikan **12** baris.
+Harus mengembalikan **13** baris (termasuk `customer_point_ledger` setelah DDL 39–41).
 
 ---
 
@@ -404,7 +409,7 @@ Buka browser: `http://localhost:5173`
 
 ```
 vue-superbase-project/
-├── DDL/                    # Skrip SQL Supabase (01–21 instalasi baru, 90–94 migrasi)
+├── DDL/                    # Skrip SQL Supabase (01–42 instalasi baru, 90–94 migrasi)
 ├── src/
 │   ├── pages/              # Halaman per route
 │   ├── components/         # UI & form
@@ -412,11 +417,13 @@ vue-superbase-project/
 │   │   ├── supabase.ts     # Klien Supabase
 │   │   ├── auth.ts         # Login, session, refresh
 │   │   ├── product.ts      # Master produk
+│   │   ├── customer.ts     # Master pelanggan
 │   │   ├── transaction.ts  # Penjualan & hutang
+│   │   ├── loyalty.ts      # Membership & poin loyalitas
 │   │   ├── stock.ts        # Restock, FIFO, pergerakan stok
 │   │   ├── queue.ts        # Antrian
 │   │   ├── analytics.ts    # Laporan laba
-│   │   └── config.ts       # QRIS & rekening
+│   │   └── config.ts       # QRIS, rekening, loyalitas, reservasi
 │   ├── types/database.ts   # TypeScript types
 │   └── router/index.ts     # Route guard auth
 ├── .env.example
@@ -801,6 +808,7 @@ sequenceDiagram
 | Tahap | Status di database | Halaman / aksi |
 |-------|-------------------|----------------|
 | Transaksi lunas | `transactions.is_paid = true`, `paid_at` terisi | `/transactions` → Bayar |
+| Loyalitas (opsional) | `loyalty_points_earned`, `loyalty_points_redeemed`, ledger | Dialog bayar — tukar poin member |
 | Antrian (opsional) | `order_queues.status = waiting` … `completed` | `/queue` |
 
 ---
@@ -859,6 +867,7 @@ sequenceDiagram
 | Bon dibuka | `transactions.is_paid = false`, `status = active` | `/transactions` → Makan Dulu |
 | Antrian dapur | `order_queues.status = waiting` … `completed` | `/queue` |
 | Tagihan | `transactions.is_paid = true`, `paid_at` terisi | `/transactions/open` → Bayar |
+| Loyalitas (opsional) | Poin ditukar & didapat saat `markTransactionAsPaid` | Dialog bayar — member saja |
 
 ---
 
@@ -1031,6 +1040,77 @@ flowchart LR
 
 ---
 
+## Membership & Poin Loyalitas
+
+> **DDL:** Jalankan [`39-customers_membership.ddl`](DDL/39-customers_membership.ddl), [`40-shop_config_loyalty.ddl`](DDL/40-shop_config_loyalty.ddl), [`41-customer_loyalty_ledger.ddl`](DDL/41-customer_loyalty_ledger.ddl), dan [`42-transactions_loyalty.ddl`](DDL/42-transactions_loyalty.ddl). Aktifkan di **Konfigurasi → Membership & Loyalty**, lalu tandai pelanggan sebagai **Member** di **Master Pembeli**.
+
+Program loyalitas memberi poin kepada pelanggan terdaftar yang ditandai sebagai member. Walk-in dan non-member tidak ikut program ini.
+
+```mermaid
+flowchart TD
+  Config["shop_config — loyalitas aktif"]
+  Member["customers.is_member = true"]
+  Pay["Transaksi lunas"]
+  Redeem["Tukar poin di dialog bayar"]
+  Earn["Dapat poin tetap per transaksi"]
+  Ledger["customer_point_ledger"]
+  Balance["customers.loyalty_points"]
+
+  Config --> Pay
+  Member --> Pay
+  Pay --> Redeem
+  Pay --> Earn
+  Redeem --> Ledger
+  Earn --> Ledger
+  Ledger --> Balance
+```
+
+### Pengaturan (`/config`)
+
+| Field | Arti |
+|-------|------|
+| `loyalty_enabled` | Aktif/nonaktif program |
+| `loyalty_points_per_transaction` | Poin yang didapat setiap transaksi **lunas** (tetap per transaksi, bukan per nominal) |
+| `loyalty_point_redeem_value` | Nilai Rupiah potongan per 1 poin yang ditukar (mis. `1000` = 1 poin = Rp 1.000) |
+
+### Syarat peserta
+
+| Kondisi | Ikut loyalitas? |
+|---------|-----------------|
+| `is_member = true` dan `is_active = true` | Ya |
+| Walk-in Customer | Tidak |
+| Non-member | Tidak |
+
+### Alur di kasir
+
+1. Pilih pelanggan **member** di `/transactions` — saldo poin tampil di form.
+2. Saat **Bayar** (pay now) atau **Bayar** dari bon terbuka / daftar transaksi, dialog pembayaran menampilkan input **Tukar poin**.
+3. Total bayar = `gross_amount − (poin_ditukar × loyalty_point_redeem_value)`.
+4. Setelah lunas, member mendapat `loyalty_points_per_transaction` poin (jika program aktif).
+5. Riwayat poin bisa dilihat di **Master Pembeli** (ikon riwayat pada baris member).
+
+### Data yang tersimpan
+
+| Tabel / kolom | Fungsi |
+|---------------|--------|
+| `customers.loyalty_points` | Saldo poin saat ini (cache untuk UI cepat) |
+| `customer_point_ledger` | Audit trail: `earn`, `redeem`, `reverse_earn`, `reverse_redeem` |
+| `transactions.gross_amount` | Subtotal sebelum diskon poin |
+| `transactions.loyalty_discount_amount` | Potongan Rupiah dari poin |
+| `transactions.loyalty_points_redeemed` | Poin yang ditukar pada transaksi |
+| `transactions.loyalty_points_earned` | Poin yang didapat pada transaksi |
+
+Pembatalan transaksi yang sudah lunas akan membalikkan perubahan poin (earn dibatalkan, poin yang ditukar dikembalikan).
+
+### File kode terkait
+
+- [`src/lib/loyalty.ts`](src/lib/loyalty.ts) — hitung redeem, apply saat bayar, reverse saat batal
+- [`src/lib/transaction.ts`](src/lib/transaction.ts) — integrasi `createTransaction` & `markTransactionAsPaid`
+- [`src/components/transactions/PaymentMethodDialog.vue`](src/components/transactions/PaymentMethodDialog.vue) — UI tukar poin
+- [`src/components/masterdata/CustomerPointHistoryDialog.vue`](src/components/masterdata/CustomerPointHistoryDialog.vue) — riwayat poin
+
+---
+
 > **DDL:** Jalankan [`27-transactions_table_number.ddl`](DDL/27-transactions_table_number.ddl) dan [`28-shop_config_payment_flow.ddl`](DDL/28-shop_config_payment_flow.ddl) sebelum menggunakan fitur ini.
 
 ---
@@ -1051,6 +1131,8 @@ flowchart LR
 | Variable env tidak terbaca | Nama harus `VITE_SUPERBASE_URL` dan `VITE_SUPERBASE_PUBLISH_KEY`; restart `pnpm dev` setelah ubah `.env` |
 | Antrian tidak update otomatis | Jalankan [`13-order_queues_realtime.ddl`](DDL/13-order_queues_realtime.ddl), atau Database → Publications → `supabase_realtime` → tambah `order_queues` |
 | Denah meja tidak update otomatis | Jalankan [`13-order_queues_realtime.ddl`](DDL/13-order_queues_realtime.ddl), [`36-table_bookings_realtime.ddl`](DDL/36-table_bookings_realtime.ddl), dan [`37-transactions_realtime.ddl`](DDL/37-transactions_realtime.ddl) — denah mendengarkan `order_queues`, `transactions`, dan `table_bookings` |
+| Poin loyalitas tidak muncul / tidak bertambah | Pastikan DDL `39`–`42` sudah dijalankan; aktifkan di **Konfigurasi → Membership & Loyalty**; pelanggan harus `is_member = true` (bukan walk-in) |
+| Tidak bisa tukar poin saat bayar | Cek saldo poin pelanggan; `loyalty_point_redeem_value` harus > 0; maksimal tukar dibatasi oleh total transaksi |
 | Badge Live tidak muncul di Antrian | Pastikan sudah login; cek koneksi WebSocket ke Supabase tidak diblokir firewall |
 
 ---

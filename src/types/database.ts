@@ -58,6 +58,8 @@ export type Customer = {
   address: string | null
   notes: string | null
   is_active: boolean
+  is_member: boolean
+  loyalty_points: number
   created_at: string
   updated_at: string
 }
@@ -67,6 +69,29 @@ export type CustomerInput = Omit<Customer, 'id' | 'created_at' | 'updated_at'>
 export type CustomerWithDebt = Customer & {
   outstandingAmount: number
   unpaidCount: number
+}
+
+export type CustomerPointLedgerEntryType =
+  | 'earn'
+  | 'redeem'
+  | 'reverse_earn'
+  | 'reverse_redeem'
+  | 'adjust'
+
+export type CustomerPointLedgerEntry = {
+  id: string
+  customer_id: string
+  transaction_id: string | null
+  entry_type: CustomerPointLedgerEntryType
+  points_delta: number
+  balance_after: number
+  notes: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type MarkTransactionAsPaidOptions = {
+  loyaltyPointsRedeemed?: number
 }
 
 export const WALK_IN_CUSTOMER_NAME = 'Walk-in Customer'
@@ -83,6 +108,10 @@ export type Transaction = {
   id: string
   customer_id: string
   total_amount: number
+  gross_amount: number | null
+  loyalty_discount_amount: number
+  loyalty_points_redeemed: number
+  loyalty_points_earned: number
   is_paid: boolean
   payment_method: PaymentMethod | null
   paid_at: string | null
@@ -133,6 +162,7 @@ export type CreateTransactionOptions = {
   table_number?: string | null
   paymentFlowMode?: PaymentFlowMode
   requireTableForEatFirst?: boolean
+  loyaltyPointsRedeemed?: number
 }
 
 export type ProductAddon = {
@@ -236,6 +266,9 @@ export type ShopConfig = {
   booking_open_time: string
   booking_close_time: string
   booking_auto_confirm: boolean
+  loyalty_enabled: boolean
+  loyalty_points_per_transaction: number
+  loyalty_point_redeem_value: number
   created_at: string
   updated_at: string
 }
@@ -256,6 +289,9 @@ export type ShopConfigInput = {
   booking_open_time?: string
   booking_close_time?: string
   booking_auto_confirm?: boolean
+  loyalty_enabled?: boolean
+  loyalty_points_per_transaction?: number
+  loyalty_point_redeem_value?: number
 }
 
 export type TableBookingStatus =

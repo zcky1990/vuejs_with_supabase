@@ -57,6 +57,7 @@ export function customerSchema() {
     address: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     is_active: z.boolean().default(true),
+    is_member: z.boolean().default(false),
   })
 }
 
@@ -161,6 +162,9 @@ export function shopConfigSchema() {
     booking_open_time: z.string().optional(),
     booking_close_time: z.string().optional(),
     booking_auto_confirm: z.boolean().optional(),
+    loyalty_enabled: z.boolean().optional(),
+    loyalty_points_per_transaction: z.coerce.number().int().min(0).max(10000).optional(),
+    loyalty_point_redeem_value: z.coerce.number().min(0).max(1000000).optional(),
   })
 }
 
