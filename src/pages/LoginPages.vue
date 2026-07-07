@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import LoginForm from '@/components/new-york-v4/blocks/login-01/components/LoginForm.vue'
 import ApplicationLayout from '@/layouts/ApplicationLayout.vue'
-import { persistAuthSession } from '@/lib/auth'
 import { useRoleStore } from '@/stores/useRoleStore'
 import { useI18n } from '@/composables/useI18n'
 import { useAlertStore } from '@/stores/useAlertStore'
@@ -28,7 +27,6 @@ const handleLogin = async (email: string, password: string) => {
   if (error) {
     alertStore.showAlert(t('alert.error'), formatAuthError(error), 'error')
   } else if (data?.session) {
-    await persistAuthSession(data.session)
     await roleStore.loadRole(true)
     router.push('/dashboard')
   }

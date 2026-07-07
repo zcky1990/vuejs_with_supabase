@@ -15,7 +15,7 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 
-import { getCookie, clearAuthCookies } from '@/lib/cookies'
+import { clearAuthCookies } from '@/lib/cookies'
 import { getCurrentUser } from '@/lib/auth'
 import { canAccessPath } from '@/lib/permissions'
 import { useRoleStore } from '@/stores/useRoleStore'
@@ -23,7 +23,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from '@/composables/useI18n'
 import { BarChart3, CalendarDays, ClipboardCheck, ClipboardList, Inbox, LayoutDashboard, LayoutGrid, List, LogOut, Monitor, Package, PackagePlus, Receipt, Settings, Shield, Tags, User, Users, UtensilsCrossed, Wallet } from '@lucide/vue'
 
-const userEmail = getCookie('_user_email')
+const userEmail = ref<string>('')
 const userAvatar = ref<string | null>(null)
 const router = useRouter()
 const roleStore = useRoleStore()
@@ -34,14 +34,21 @@ function canShow(path: string) {
   return canAccessPath(path, roleStore.role)
 }
 
-async function loadUserAvatar() {
+async function loadUser() {
   const { user } = await getCurrentUser()
+  userEmail.value = user?.email ?? ''
   userAvatar.value = user?.avatarUrl ?? null
+}
+
+async function handleLogout() {
+  clearAuthCookies()
+  roleStore.clear()
+  router.push('/login')
 }
 
 const data = computed(() => {
   return {
-  email: userEmail,
+  email: userEmail.value,
   menu: [
     {
       group: t('nav.account'),
@@ -63,11 +70,7 @@ const data = computed(() => {
           title: t('nav.logout'),
           url: '/logout',
           icon: LogOut,
-          onClick: () => {
-            clearAuthCookies()
-            roleStore.clear()
-            router.push('/login')
-          },
+          onClick: handleLogout,
         },
       ],
     },
@@ -77,12 +80,12 @@ const data = computed(() => {
 
 onMounted(() => {
   roleStore.loadRole()
-  loadUserAvatar()
-  window.addEventListener('user-avatar-changed', loadUserAvatar)
+  loadUser()
+  window.addEventListener('user-avatar-changed', loadUser)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('user-avatar-changed', loadUserAvatar)
+  window.removeEventListener('user-avatar-changed', loadUser)
 })
 </script>
 

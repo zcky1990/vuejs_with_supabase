@@ -20,7 +20,7 @@ import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import ProfitTrendChart from '@/components/analytics/ProfitTrendChart.vue'
 import { useI18n } from '@/composables/useI18n'
 import { getDateRangePreset, getFullAnalyticsReport } from '@/lib/analytics'
-import { getCookie } from '@/lib/cookies'
+import { getCurrentUser } from '@/lib/auth'
 import { getActiveQueues } from '@/lib/queue'
 import { getLowStockProducts } from '@/lib/stock'
 import { formatPercent, formatPrice } from '@/lib/format'
@@ -56,7 +56,7 @@ const queuePreparing = ref(0)
 const queueReady = ref(0)
 const queueServing = ref(0)
 
-const userEmail = getCookie('_user_email')
+const userEmail = ref<string>('')
 
 const dateLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'id-ID'))
 
@@ -92,6 +92,9 @@ const quickActions = computed(() => [
 
 async function loadDashboard() {
   isLoading.value = true
+
+  const { user } = await getCurrentUser()
+  userEmail.value = user?.email ?? ''
 
   const todayRange = getDateRangePreset('today')
   const weekRange = getDateRangePreset('7d')

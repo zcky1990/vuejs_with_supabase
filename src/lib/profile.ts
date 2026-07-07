@@ -1,4 +1,3 @@
-import { getCookie } from './cookies'
 import { supabase } from './supabase'
 import { getCurrentUser } from './auth'
 import { useLocaleStore } from '@/stores/useLocaleStore'
@@ -60,8 +59,9 @@ export async function createUserWithRole(input: {
   role: UserRole
 }) {
   const supabaseClient = supabase()
-  const accessToken = getCookie('_access_token')
-  const refreshToken = getCookie('_refresh_token')
+
+  const { data: currentSession } = await supabaseClient.auth.getSession()
+  const adminSession = currentSession.session
 
   const { data, error } = await supabaseClient.auth.signUp({
     email: input.email.trim(),
@@ -69,25 +69,30 @@ export async function createUserWithRole(input: {
     options: {
       data: {
         full_name: input.fullName.trim(),
-        role: input.role,
       },
     },
   })
 
   if (error) {
+    if (adminSession) {
+      await supabaseClient.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token,
+      })
+    }
     return { userId: null, error }
-  }
-
-  if (accessToken && refreshToken) {
-    await supabaseClient.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    })
   }
 
   const userId = data.user?.id ?? null
   if (userId) {
     await updateProfileRole(userId, input.role)
+  }
+
+  if (adminSession) {
+    await supabaseClient.auth.setSession({
+      access_token: adminSession.access_token,
+      refresh_token: adminSession.refresh_token,
+    })
   }
 
   return { userId, error: null }
