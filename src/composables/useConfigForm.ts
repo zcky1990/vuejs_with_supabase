@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from './useI18n'
 import { useAlertStore } from '@/stores/useAlertStore'
@@ -360,6 +360,7 @@ export function useConfigForm(options?: { confirm?: ConfirmFn }) {
     suppressDirtyTracking.value = true
     applyConfig(config)
     isDirty.value = false
+    await nextTick()
     suppressDirtyTracking.value = false
   }
 
