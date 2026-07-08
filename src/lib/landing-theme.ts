@@ -7,6 +7,7 @@ export const LANDING_TEMPLATE_COLOR_MODE: Record<LandingTemplate, LandingColorMo
   yummy: 'light',
   sarab: 'dark',
   spicehaven: 'dark',
+  apple: 'light',
 }
 
 export const LANDING_TEMPLATE_BASE_BG: Record<LandingTemplate, string> = {
@@ -14,6 +15,7 @@ export const LANDING_TEMPLATE_BASE_BG: Record<LandingTemplate, string> = {
   yummy: '#f9f9f9',
   sarab: '#09090b',
   spicehaven: '#0c0a09',
+  apple: '#ffffff',
 }
 
 export function getLandingColorMode(template: LandingTemplate): LandingColorMode {

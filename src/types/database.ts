@@ -451,7 +451,7 @@ export type ShopConfigInput = {
   landing_nav_logo_url?: string | null
 }
 
-export type LandingTemplate = 'default' | 'sarab' | 'spicehaven' | 'yummy'
+export type LandingTemplate = 'default' | 'sarab' | 'spicehaven' | 'yummy' | 'apple'
 
 export type LandingTestimonial = {
   name: string

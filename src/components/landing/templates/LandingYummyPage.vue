@@ -166,16 +166,6 @@ const bookStyle = computed(() => landingSectionStyle(props.bookBgImage, props.bo
               <p class="mb-6 leading-relaxed text-slate-600">
                 {{ aboutDescription || t('config.landingYummyAboutDesc') }}
               </p>
-              <ul class="mb-8 space-y-3">
-                <li
-                  v-for="(bullet, idx) in aboutBulletsList"
-                  :key="idx"
-                  class="flex gap-3 text-sm text-slate-600"
-                >
-                  <Check class="mt-0.5 size-4 shrink-0" :style="{ color: primaryColor }" />
-                  <span>{{ bullet }}</span>
-                </li>
-              </ul>
               <div
                 class="inline-block rounded-lg border-2 px-6 py-4 text-center"
                 :style="{ borderColor: primaryColor }"

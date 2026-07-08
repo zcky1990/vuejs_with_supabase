@@ -3,6 +3,7 @@ import defaultThumb from '@/assets/default-thumbnail.webp'
 import sarabThumb from '@/assets/satab-thumbnail.webp'
 import spiceThumb from '@/assets/spice-thumbnail.webp'
 import yummyThumb from '@/assets/yummy-thumbnail.webp'
+import appleThumb from '@/assets/apple-thumbnail.webp'
 
 const LANDING_SECTION_BG_LIGHT = {
   heroBgColor: '#ffffff',
@@ -55,6 +56,23 @@ const LANDING_ABOUT_WHY_SPICE_DISABLED = {
   ...LANDING_ABOUT_WHY_LIGHT_DISABLED,
   aboutBgColor: '#0c0a09',
   whyBgColor: '#1c1917',
+}
+
+const LANDING_ABOUT_WHY_APPLE = {
+  aboutEnabled: true,
+  aboutLabel: null as string | null,
+  aboutTitle: null as string | null,
+  aboutDescription: null as string | null,
+  aboutImageUrl: null as string | null,
+  aboutBullets: null as string[] | null,
+  aboutBgColor: '#ffffff',
+  whyEnabled: true,
+  whyLabel: null as string | null,
+  whyTitle: null as string | null,
+  whyDescription: null as string | null,
+  whyFeatures: null as LandingFeatureItem[] | null,
+  whyStats: null as LandingStatItem[] | null,
+  whyBgColor: '#f5f5f7',
 }
 
 const LANDING_ABOUT_WHY_YUMMY = {
@@ -118,6 +136,21 @@ export const LANDING_TEMPLATE_PRESETS: Record<LandingTemplate, LandingTemplatePr
       contactMapLat: -6.2088, contactMapLng: 106.8456, contactMapZoom: 15, contactBgColor: '#0c0a09',
       ...LANDING_SECTION_BG_SPICE,
       ...LANDING_ABOUT_WHY_SPICE_DISABLED,
+    },
+  },
+  apple: {
+    label: 'Apple',
+    thumbnail: appleThumb,
+    defaults: {
+      heroImageUrl: null, heroTitle: null, heroSubtitle: null, heroTagline: null, primaryColor: '#1d1d1f',
+      carouselEnabled: true, carouselMaxItems: 6, carouselTitle: null, carouselBgColor: '#f5f5f7',
+      testimonialsEnabled: false, testimonialsTitle: null, testimonialsData: null, testimonialsBgColor: '#ffffff',
+      servicesEnabled: false, servicesTitle: null, servicesSubtitle: null, servicesWhatsapp: null, servicesData: null, servicesBgColor: '#000000',
+      galleryEnabled: false, galleryTitle: null, gallerySubtitle: null, galleryImages: null, galleryBgColor: '#ffffff',
+      contactEnabled: false, contactTitle: null, contactSubtitle: null, contactAddress: null, contactPhone: null, contactEmail: null,
+      contactMapLat: -6.2088, contactMapLng: 106.8456, contactMapZoom: 15, contactBgColor: '#f5f5f7',
+      ...LANDING_SECTION_BG_LIGHT,
+      ...LANDING_ABOUT_WHY_APPLE,
     },
   },
   yummy: {

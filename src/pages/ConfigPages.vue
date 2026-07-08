@@ -13,6 +13,7 @@ import satabThumb from '@/assets/satab-thumbnail.webp'
 import spiceThumb from '@/assets/spice-thumbnail.webp'
 import yummyThumb from '@/assets/yummy-thumbnail.webp'
 import defaultThumb from '@/assets/default-thumbnail.webp'
+import appleThumb from '@/assets/apple-thumbnail.webp'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useI18n } from '@/composables/useI18n'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
@@ -180,6 +181,7 @@ const templateOptions = computed(() => [
   { id: 'sarab', name: t('config.landingSarab'), desc: t('config.landingSarabDesc'), thumb: satabThumb, color: null },
   { id: 'spicehaven', name: t('config.landingSpiceHaven'), desc: t('config.landingSpiceHavenDesc'), thumb: spiceThumb, color: null },
   { id: 'yummy', name: t('config.landingYummy'), desc: t('config.landingYummyDesc'), thumb: yummyThumb, color: null },
+  { id: 'apple', name: t('config.landingApple'), desc: t('config.landingAppleDesc'), thumb: appleThumb, color: null },
 ])
 
 const handleBeforeUnload = (event: BeforeUnloadEvent) => {
