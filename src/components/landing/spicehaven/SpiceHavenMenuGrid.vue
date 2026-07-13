@@ -24,7 +24,7 @@ const items = computed(() => props.products.slice(0, props.maxItems))
 <template>
   <section class="landing-fade-up px-6 py-20" :style="sectionStyle">
     <div class="mx-auto max-w-6xl">
-      <p class="mb-10 text-center text-sm tracking-[0.25em] text-amber-500 uppercase">
+      <p class="mb-10 text-center text-sm text-amber-500">
         {{ title || t('config.landingSpiceHavenMenuLabel') }}
       </p>
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -70,7 +70,7 @@ const featureIcons = [ChefHat, Users, Leaf]
 </script>
 
 <template>
-  <ApplicationLayout show-staff-button>
+  <ApplicationLayout>
     <div class="w-full bg-[#0f172a] font-serif text-[#f8fafc]">
       <div class="landing-scroll-progress fixed top-0 right-0 left-0 z-[60] h-0.5 origin-left scale-x-0" :style="{ backgroundColor: primaryColor }" />
       <FugaNav :shop-name="shopName" :accent-color="primaryColor" :nav-logo-url="navLogoUrl" />
@@ -79,7 +79,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       <section id="hero" class="landing-fade-in relative flex min-h-screen overflow-hidden" :style="heroStyle">
         <div class="landing-parallax absolute inset-0 bg-gradient-to-br from-[#0f172a]/90 via-[#1e293b]/60 to-[#0f172a]" />
         <div class="relative z-10 mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center px-6 py-32 text-center">
-          <p class="landing-hero-choreo mb-6 text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+          <p class="landing-hero-choreo mb-6 text-sm text-white/40">
             {{ displayTagline }}
           </p>
           <h1 class="landing-hero-choreo landing-text-reveal max-w-4xl font-serif text-5xl leading-tight font-bold tracking-tight md:text-6xl lg:text-7xl">
@@ -131,7 +131,7 @@ const featureIcons = [ChefHat, Users, Leaf]
               </div>
             </div>
             <div class="max-w-lg">
-              <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+              <p class="mb-2 font-sans text-sm text-white/40">
                 {{ aboutLabel || t('config.landingFugaAbout') }}
               </p>
               <h2 class="mb-6 text-4xl font-bold leading-tight md:text-5xl">
@@ -163,7 +163,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="whyStyle"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+          <p class="mb-2 font-sans text-sm text-white/40">
             {{ whyLabel || t('config.landingFugaWhy') }}
           </p>
           <h2 class="mb-6 text-4xl font-bold leading-tight md:text-5xl">
@@ -176,7 +176,7 @@ const featureIcons = [ChefHat, Users, Leaf]
             <div
               v-for="(feat, idx) in whyFeaturesList"
               :key="feat.title"
-              class="landing-stagger rounded-xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-sm transition-all hover:-translate-y-1 hover:shadow-xl"
+              class="landing-stagger rounded-xl border border-white/10 bg-[#1e293b] p-8 text-center transition-all hover:-translate-y-1 hover:shadow-xl"
               :style="{ '--i': idx }"
             >
               <component :is="featureIcons[idx % featureIcons.length]" class="mx-auto mb-5 size-10" :style="{ color: primaryColor }" />
@@ -184,7 +184,7 @@ const featureIcons = [ChefHat, Users, Leaf]
               <p class="font-sans text-sm text-white/50">{{ feat.description }}</p>
             </div>
           </div>
-          <div v-if="whyStatsList.length > 0" class="mt-16 grid gap-8 rounded-xl border border-white/10 bg-white/5 px-8 py-12 backdrop-blur-sm sm:grid-cols-4">
+          <div v-if="whyStatsList.length > 0" class="mt-16 grid gap-8 rounded-xl border border-white/10 bg-[#1e293b] px-8 py-12 sm:grid-cols-4">
             <div v-for="stat in whyStatsList" :key="stat.label" class="text-center">
               <p class="landing-counter text-4xl font-bold" :style="{ color: primaryColor }">{{ stat.value }}</p>
               <p class="mt-2 font-sans text-sm text-white/50">{{ stat.label }}</p>
@@ -195,7 +195,7 @@ const featureIcons = [ChefHat, Users, Leaf]
 
       <!-- Marquee -->
       <div class="landing-marquee overflow-hidden border-y border-white/10 bg-[#1e293b] py-4">
-        <div class="flex gap-12 whitespace-nowrap text-sm font-semibold tracking-[0.2em] text-white/30 uppercase">
+        <div class="flex gap-12 whitespace-nowrap text-sm font-semibold text-white/30">
           <span>{{ t('config.landingFugaMarquee') }}</span>
           <span>✦</span>
           <span>{{ t('config.landingFugaMarquee') }}</span>
@@ -213,7 +213,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         class="landing-fade-up px-6 py-24"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+          <p class="mb-2 font-sans text-sm text-white/40">
             {{ t('config.landingFugaMenuLabel') }}
           </p>
           <h2 class="mb-12 text-4xl font-bold leading-tight md:text-5xl">
@@ -268,7 +268,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="galleryStyle"
       >
         <div class="mx-auto max-w-4xl text-center">
-          <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+          <p class="mb-2 font-sans text-sm text-white/40">
             {{ t('config.landingFugaTestimonialsLabel') }}
           </p>
           <h2 class="mb-12 text-4xl font-bold leading-tight md:text-5xl">
@@ -278,7 +278,7 @@ const featureIcons = [ChefHat, Users, Leaf]
             <div
               v-for="(item, idx) in testimonialsData"
               :key="item.name"
-              class="landing-stagger rounded-xl border border-white/10 bg-white/5 p-6 text-left backdrop-blur-sm"
+              class="landing-stagger rounded-xl border border-white/10 bg-[#1e293b] p-6 text-left"
               :style="{ '--i': idx }"
             >
               <div class="mb-3 flex gap-1">
@@ -300,7 +300,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="servicesStyle"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+          <p class="mb-2 font-sans text-sm text-white/40">
             {{ t('config.landingFugaServicesLabel') }}
           </p>
           <h2 class="mb-3 text-4xl font-bold leading-tight md:text-5xl">
@@ -313,7 +313,7 @@ const featureIcons = [ChefHat, Users, Leaf]
             <div
               v-for="(item, idx) in servicesData"
               :key="idx"
-              class="landing-stagger group overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left backdrop-blur-sm transition-all hover:-translate-y-1 hover:shadow-xl"
+              class="landing-stagger group overflow-hidden rounded-xl border border-white/10 bg-[#1e293b] text-left transition-all hover:-translate-y-1 hover:shadow-xl"
               :style="{ '--i': idx }"
             >
               <div class="relative h-48 overflow-hidden">
@@ -347,7 +347,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="galleryStyle"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+          <p class="mb-2 font-sans text-sm text-white/40">
             {{ t('config.landingFugaGalleryLabel') }}
           </p>
           <h2 class="mb-12 text-4xl font-bold leading-tight md:text-5xl">
@@ -375,7 +375,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       >
         <div class="mx-auto max-w-7xl">
           <div class="text-center">
-            <p class="mb-2 font-sans text-xs font-semibold tracking-[0.2em] text-white/40 uppercase">
+            <p class="mb-2 font-sans text-sm text-white/40">
               {{ t('config.landingFugaContactLabel') }}
             </p>
             <h2 class="mb-12 text-4xl font-bold leading-tight md:text-5xl">
@@ -383,19 +383,19 @@ const featureIcons = [ChefHat, Users, Leaf]
             </h2>
           </div>
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div v-if="contactAddress || shopAddress" class="rounded-xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm">
+            <div v-if="contactAddress || shopAddress" class="rounded-xl border border-white/10 bg-[#1e293b] p-6 text-center">
               <MapPin class="mx-auto mb-3 size-6" :style="{ color: primaryColor }" />
               <p class="font-sans text-sm text-white/60">{{ contactAddress || shopAddress }}</p>
             </div>
-            <div v-if="contactPhone || shopPhone" class="rounded-xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm">
+            <div v-if="contactPhone || shopPhone" class="rounded-xl border border-white/10 bg-[#1e293b] p-6 text-center">
               <Phone class="mx-auto mb-3 size-6" :style="{ color: primaryColor }" />
               <p class="font-sans text-sm text-white/60">{{ contactPhone || shopPhone }}</p>
             </div>
-            <div v-if="contactEmail" class="rounded-xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm">
+            <div v-if="contactEmail" class="rounded-xl border border-white/10 bg-[#1e293b] p-6 text-center">
               <Mail class="mx-auto mb-3 size-6" :style="{ color: primaryColor }" />
               <p class="font-sans text-sm text-white/60">{{ contactEmail }}</p>
             </div>
-            <div class="rounded-xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm">
+            <div class="rounded-xl border border-white/10 bg-[#1e293b] p-6 text-center">
               <Clock class="mx-auto mb-3 size-6" :style="{ color: primaryColor }" />
               <p class="font-sans text-sm text-white/60">{{ t('config.landingDefaultHours') }}</p>
             </div>

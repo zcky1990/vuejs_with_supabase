@@ -55,7 +55,7 @@ const categoryBgColor = computed(() => props.carouselBgColor || '#09090b')
 </script>
 
 <template>
-  <ApplicationLayout show-staff-button>
+  <ApplicationLayout>
     <div class="w-full bg-zinc-950 text-white">
       <div class="landing-scroll-progress fixed top-0 right-0 left-0 z-[60] h-0.5 origin-left scale-x-0" :style="{ backgroundColor: primaryColor }" />
       <section id="hero" class="landing-fade-in relative overflow-hidden" :style="heroStyle">
@@ -147,7 +147,8 @@ const categoryBgColor = computed(() => props.carouselBgColor || '#09090b')
             <div
               v-for="(feat, idx) in whyFeaturesList"
               :key="feat.title"
-              class="rounded-2xl border border-zinc-800 bg-zinc-950 p-6"
+              class="landing-stagger rounded-2xl border border-zinc-800 bg-zinc-950 p-6"
+              :style="{ '--i': idx }"
             >
               <component :is="featureIcons[idx] || Leaf" class="mb-4 size-8 text-orange-400" />
               <h3 class="mb-2 font-semibold">{{ feat.title }}</h3>
@@ -193,7 +194,7 @@ const categoryBgColor = computed(() => props.carouselBgColor || '#09090b')
         </div>
       </section>
 
-      <section class="border-t border-zinc-800 bg-zinc-900 px-6 py-10">
+      <section class="landing-fade-up border-t border-zinc-800 bg-zinc-900 px-6 py-10">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-zinc-400">
           <div class="flex items-center gap-2">
             <MapPin class="size-4 text-orange-400" />

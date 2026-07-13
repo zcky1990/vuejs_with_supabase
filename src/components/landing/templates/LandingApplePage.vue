@@ -69,7 +69,7 @@ const featureIcons = [ChefHat, Users, Leaf]
 </script>
 
 <template>
-  <ApplicationLayout show-staff-button>
+  <ApplicationLayout>
     <div class="w-full bg-white text-[#1d1d1f]">
       <div class="landing-scroll-progress fixed top-0 right-0 left-0 z-[60] h-0.5 origin-left scale-x-0" :style="{ backgroundColor: primaryColor }" />
       <AppleNav :shop-name="shopName" :accent-color="primaryColor" :nav-logo-url="navLogoUrl" />
@@ -77,7 +77,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       <section id="hero" class="landing-fade-in relative min-h-[90vh] overflow-hidden bg-black" :style="heroStyle">
         <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black" />
         <div class="landing-hero-choreo relative z-10 mx-auto flex min-h-[90vh] max-w-7xl flex-col items-center justify-center px-6 py-32 text-center">
-          <p class="mb-6 text-xs font-semibold tracking-[0.15em] text-white/40 uppercase">
+           <p class="mb-6 text-sm text-white/40">
             {{ displayTagline }}
           </p>
           <h1 class="max-w-4xl text-5xl leading-tight font-bold tracking-tight text-white md:text-6xl lg:text-7xl">
@@ -128,7 +128,7 @@ const featureIcons = [ChefHat, Users, Leaf]
               </div>
             </div>
             <div class="max-w-lg">
-              <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-[#86868b] uppercase">
+              <p class="mb-2 text-sm text-[#86868b]">
                 {{ aboutLabel || t('config.landingAppleAbout') }}
               </p>
               <h2 class="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
@@ -159,7 +159,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="whyStyle"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-[#86868b] uppercase">
+          <p class="mb-2 text-sm text-[#86868b]">
             {{ whyLabel || t('config.landingAppleWhy') }}
           </p>
           <h2 class="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
@@ -172,7 +172,8 @@ const featureIcons = [ChefHat, Users, Leaf]
             <div
               v-for="(feat, idx) in whyFeaturesList"
               :key="feat.title"
-              class="rounded-2xl border border-[#d2d2d7] bg-white p-8 text-center transition-shadow hover:shadow-lg"
+              class="landing-stagger rounded-lg border border-[#d2d2d7] bg-white p-8 text-center"
+              :style="{ '--i': idx }"
             >
               <component :is="featureIcons[idx % featureIcons.length]" class="mx-auto mb-5 size-10" :style="{ color: primaryColor }" />
               <h3 class="mb-3 text-xl font-semibold">{{ feat.title }}</h3>
@@ -194,7 +195,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         class="landing-fade-up bg-[#f5f5f7] px-6 py-24"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-[#86868b] uppercase">
+          <p class="mb-2 text-sm text-[#86868b]">
             {{ t('config.landingAppleMenuLabel') }}
           </p>
           <h2 class="mb-12 text-4xl font-bold tracking-tight md:text-5xl">
@@ -202,10 +203,11 @@ const featureIcons = [ChefHat, Users, Leaf]
           </h2>
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <RouterLink
-              v-for="product in products.slice(0, carouselMaxItems)"
+              v-for="(product, idx) in products.slice(0, carouselMaxItems)"
               :key="product.id"
               to="/order"
-              class="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-md"
+              class="landing-stagger group overflow-hidden rounded-2xl bg-white shadow-sm transition-all hover:shadow-md"
+              :style="{ '--i': idx }"
             >
               <div class="relative h-56 overflow-hidden bg-[#f5f5f7]">
                 <img
@@ -247,7 +249,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="galleryStyle"
       >
         <div class="mx-auto max-w-4xl text-center">
-          <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-[#86868b] uppercase">
+          <p class="mb-2 text-sm text-[#86868b]">
             {{ t('config.landingAppleTestimonialsLabel') }}
           </p>
           <h2 class="mb-12 text-4xl font-bold tracking-tight md:text-5xl">
@@ -277,7 +279,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="servicesStyle"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-white/40 uppercase">
+           <p class="mb-2 text-sm text-white/40">
             {{ t('config.landingAppleServicesLabel') }}
           </p>
           <h2 class="mb-3 text-4xl font-bold tracking-tight text-white md:text-5xl">
@@ -322,7 +324,7 @@ const featureIcons = [ChefHat, Users, Leaf]
         :style="galleryStyle"
       >
         <div class="mx-auto max-w-7xl text-center">
-          <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-[#86868b] uppercase">
+          <p class="mb-2 text-sm text-[#86868b]">
             {{ t('config.landingAppleGalleryLabel') }}
           </p>
           <h2 class="mb-12 text-4xl font-bold tracking-tight md:text-5xl">
@@ -348,7 +350,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       >
         <div class="mx-auto max-w-7xl">
           <div class="text-center">
-            <p class="mb-2 text-sm font-semibold tracking-[0.15em] text-[#86868b] uppercase">
+            <p class="mb-2 text-sm text-[#86868b]">
               {{ t('config.landingAppleContactLabel') }}
             </p>
             <h2 class="mb-12 text-4xl font-bold tracking-tight md:text-5xl">

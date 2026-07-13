@@ -20,7 +20,7 @@ const sectionStyle = computed(() => landingSectionStyle(props.bgImage, props.bgC
 <template>
   <section id="story" class="landing-fade-up border-y border-amber-900/30 px-6 py-20" :style="sectionStyle">
     <div class="mx-auto max-w-4xl text-center">
-      <p class="mb-2 text-sm tracking-[0.25em] text-amber-500 uppercase">
+      <p class="mb-2 text-sm text-amber-500">
         {{ label || t('config.landingSpiceHavenStory') }}
       </p>
       <h2 class="mb-6 font-serif text-3xl text-amber-50 md:text-4xl">

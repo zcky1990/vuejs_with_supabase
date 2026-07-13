@@ -79,7 +79,7 @@ const bookStyle = computed(() => landingSectionStyle(props.bookBgImage, props.bo
 </script>
 
 <template>
-  <ApplicationLayout show-staff-button>
+  <ApplicationLayout>
     <div class="yummy-page w-full bg-[#f9f9f9] text-slate-700">
       <div class="landing-scroll-progress fixed top-0 right-0 left-0 z-[60] h-0.5 origin-left scale-x-0" :style="{ backgroundColor: primaryColor }" />
       <YummyNav :shop-name="shopName" :accent-color="primaryColor" :nav-logo-url="navLogoUrl" />
@@ -193,7 +193,7 @@ const bookStyle = computed(() => landingSectionStyle(props.bookBgImage, props.bo
         <div class="mx-auto max-w-6xl">
           <div class="mb-12 grid items-start gap-10 lg:grid-cols-2">
             <div>
-              <p class="mb-2 text-sm font-semibold tracking-[0.2em] uppercase" :style="{ color: primaryColor }">
+              <p class="mb-2 text-sm font-semibold" :style="{ color: primaryColor }">
                 {{ whyLabel || t('config.landingYummyWhyChoose') }}
               </p>
               <h2 class="yummy-font-display mb-4 text-3xl font-bold text-slate-800">
@@ -216,7 +216,8 @@ const bookStyle = computed(() => landingSectionStyle(props.bookBgImage, props.bo
               <div
                 v-for="(feature, idx) in whyFeaturesList"
                 :key="idx"
-                class="rounded-lg bg-white p-5 text-center shadow-sm"
+                class="landing-stagger rounded-lg bg-white p-5 text-center shadow-sm"
+                :style="{ '--i': idx }"
               >
                 <component
                   :is="featureIcons[idx % featureIcons.length]"
@@ -229,7 +230,7 @@ const bookStyle = computed(() => landingSectionStyle(props.bookBgImage, props.bo
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-6 rounded-lg bg-white px-6 py-10 shadow-sm md:grid-cols-4">
+          <div class="landing-fade-up grid grid-cols-2 gap-6 rounded-lg bg-white px-6 py-10 shadow-sm md:grid-cols-4">
             <div v-for="stat in whyStatsList" :key="stat.label" class="text-center">
               <p class="landing-counter text-3xl font-bold md:text-4xl" :style="{ color: primaryColor }">{{ stat.value }}</p>
               <p class="mt-2 text-sm text-slate-500">{{ stat.label }}</p>

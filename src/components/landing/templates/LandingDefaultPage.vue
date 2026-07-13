@@ -76,7 +76,7 @@ const featureIcons = [ChefHat, Users, Leaf]
 </script>
 
 <template>
-  <ApplicationLayout show-staff-button>
+  <ApplicationLayout>
     <div class="w-full text-[var(--landing-text)]">
       <div class="landing-scroll-progress fixed top-0 right-0 left-0 z-[60] h-0.5 origin-left scale-x-0" :style="{ backgroundColor: primaryColor }" />
       <section
@@ -143,7 +143,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       >
         <div class="mx-auto max-w-6xl">
           <div class="mb-12 text-center">
-            <p class="mb-2 text-sm font-semibold tracking-widest uppercase" style="color: var(--landing-muted)">
+            <p class="mb-2 text-sm font-semibold" style="color: var(--landing-muted)">
               {{ aboutLabel || t('config.landingDefaultAbout') }}
             </p>
             <h2 class="text-3xl font-bold tracking-tight" style="color: var(--landing-heading)">
@@ -193,7 +193,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       >
         <div class="mx-auto max-w-6xl">
           <div class="mb-12 text-center">
-            <p class="mb-2 text-sm font-semibold tracking-widest uppercase" style="color: var(--landing-muted)">
+            <p class="mb-2 text-sm font-semibold" style="color: var(--landing-muted)">
               {{ whyLabel || t('config.landingDefaultWhy') }}
             </p>
             <h2 class="text-3xl font-bold tracking-tight" style="color: var(--landing-heading)">
@@ -207,15 +207,15 @@ const featureIcons = [ChefHat, Users, Leaf]
             <div
               v-for="(feat, idx) in whyFeaturesList"
               :key="feat.title"
-              class="rounded-2xl border p-6 text-center transition-shadow hover:shadow-lg"
-              :style="{ borderColor: 'var(--landing-border)', backgroundColor: 'var(--landing-surface)' }"
+              class="landing-stagger rounded-lg border p-6 text-center"
+              :style="{ '--i': idx, borderColor: 'var(--landing-border)', backgroundColor: 'var(--landing-surface)' }"
             >
               <component :is="featureIcons[idx % featureIcons.length]" class="mx-auto mb-4 size-8" :style="{ color: primaryColor }" />
               <h3 class="mb-2 font-semibold" style="color: var(--landing-heading)">{{ feat.title }}</h3>
               <p class="text-sm leading-relaxed" style="color: var(--landing-muted)">{{ feat.description }}</p>
             </div>
           </div>
-          <div v-if="whyStatsList.length > 0" class="mt-12 grid gap-6 rounded-2xl border px-6 py-10 sm:grid-cols-4" :style="{ borderColor: 'var(--landing-border)', backgroundColor: 'var(--landing-surface)' }">
+          <div v-if="whyStatsList.length > 0" class="landing-fade-up mt-12 grid gap-6 rounded-lg border px-6 py-10 sm:grid-cols-4" :style="{ borderColor: 'var(--landing-border)', backgroundColor: 'var(--landing-surface)' }">
             <div v-for="stat in whyStatsList" :key="stat.label" class="text-center">
               <p class="landing-counter text-3xl font-bold" :style="{ color: primaryColor }">{{ stat.value }}</p>
               <p class="mt-1 text-sm" style="color: var(--landing-muted)">{{ stat.label }}</p>
@@ -227,7 +227,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       <section id="features" class="landing-fade-up border-b px-6 py-20" style="background-color: var(--landing-surface)">
         <div class="mx-auto max-w-6xl">
           <div class="mb-12 text-center">
-            <p class="mb-2 text-sm font-semibold tracking-widest uppercase" style="color: var(--landing-muted)">
+            <p class="mb-2 text-sm font-semibold" style="color: var(--landing-muted)">
               {{ t('config.landingDefaultFeaturesLabel') }}
             </p>
             <h2 class="text-3xl font-bold tracking-tight" style="color: var(--landing-heading)">
@@ -236,44 +236,22 @@ const featureIcons = [ChefHat, Users, Leaf]
           </div>
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div
-              class="group rounded-2xl border p-6 transition-shadow hover:shadow-lg"
+              v-for="(item, idx) in [
+                { icon: ChefHat, bg: 'bg-amber-100', color: 'text-amber-600', title: t('config.landingDefaultFeat1Title'), desc: t('config.landingDefaultFeat1Desc') },
+                { icon: Leaf, bg: 'bg-emerald-100', color: 'text-emerald-600', title: t('config.landingDefaultFeat2Title'), desc: t('config.landingDefaultFeat2Desc') },
+                { icon: Clock, bg: 'bg-sky-100', color: 'text-sky-600', title: t('config.landingDefaultFeat3Title'), desc: t('config.landingDefaultFeat3Desc') },
+                { icon: Users, bg: 'bg-violet-100', color: 'text-violet-600', title: t('config.landingDefaultFeat4Title'), desc: t('config.landingDefaultFeat4Desc') },
+              ]"
+              :key="idx"
+              class="landing-stagger group rounded-lg border p-6"
               style="border-color: var(--landing-border); background-color: var(--landing-surface)"
+              :style="{ '--i': idx }"
             >
-              <div class="mb-4 flex size-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                <ChefHat class="size-6" />
+              <div class="mb-4 flex size-12 items-center justify-center rounded-xl" :class="item.bg">
+                <component :is="item.icon" class="size-6" :class="item.color" />
               </div>
-              <h3 class="mb-2 font-semibold" style="color: var(--landing-heading)">{{ t('config.landingDefaultFeat1Title') }}</h3>
-              <p class="text-sm leading-relaxed" style="color: var(--landing-muted)">{{ t('config.landingDefaultFeat1Desc') }}</p>
-            </div>
-            <div
-              class="group rounded-2xl border p-6 transition-shadow hover:shadow-lg"
-              style="border-color: var(--landing-border); background-color: var(--landing-surface)"
-            >
-              <div class="mb-4 flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                <Leaf class="size-6" />
-              </div>
-              <h3 class="mb-2 font-semibold" style="color: var(--landing-heading)">{{ t('config.landingDefaultFeat2Title') }}</h3>
-              <p class="text-sm leading-relaxed" style="color: var(--landing-muted)">{{ t('config.landingDefaultFeat2Desc') }}</p>
-            </div>
-            <div
-              class="group rounded-2xl border p-6 transition-shadow hover:shadow-lg"
-              style="border-color: var(--landing-border); background-color: var(--landing-surface)"
-            >
-              <div class="mb-4 flex size-12 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                <Clock class="size-6" />
-              </div>
-              <h3 class="mb-2 font-semibold" style="color: var(--landing-heading)">{{ t('config.landingDefaultFeat3Title') }}</h3>
-              <p class="text-sm leading-relaxed" style="color: var(--landing-muted)">{{ t('config.landingDefaultFeat3Desc') }}</p>
-            </div>
-            <div
-              class="group rounded-2xl border p-6 transition-shadow hover:shadow-lg"
-              style="border-color: var(--landing-border); background-color: var(--landing-surface)"
-            >
-              <div class="mb-4 flex size-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                <Users class="size-6" />
-              </div>
-              <h3 class="mb-2 font-semibold" style="color: var(--landing-heading)">{{ t('config.landingDefaultFeat4Title') }}</h3>
-              <p class="text-sm leading-relaxed" style="color: var(--landing-muted)">{{ t('config.landingDefaultFeat4Desc') }}</p>
+              <h3 class="mb-2 font-semibold" style="color: var(--landing-heading)">{{ item.title }}</h3>
+              <p class="text-sm leading-relaxed" style="color: var(--landing-muted)">{{ item.desc }}</p>
             </div>
           </div>
         </div>
@@ -307,7 +285,7 @@ const featureIcons = [ChefHat, Users, Leaf]
       <section
         id="contact"
         v-if="!contactEnabled"
-        class="border-t px-6 py-10"
+        class="landing-fade-up border-t px-6 py-10"
         style="border-color: var(--landing-border); background-color: var(--landing-surface-muted)"
       >
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm" style="color: var(--landing-muted)">

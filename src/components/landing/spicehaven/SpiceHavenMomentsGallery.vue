@@ -18,7 +18,7 @@ const sectionStyle = computed(() => landingSectionStyle(props.bgImage, props.bgC
 <template>
   <section id="moments" class="landing-fade-up px-6 py-20" :style="sectionStyle">
     <div class="mx-auto max-w-6xl text-center">
-      <p class="mb-2 text-sm tracking-[0.25em] text-amber-500 uppercase">
+      <p class="mb-2 text-sm text-amber-500">
         {{ t('config.landingSpiceHavenMoments') }}
       </p>
       <h2 class="mb-3 font-serif text-3xl text-amber-50">

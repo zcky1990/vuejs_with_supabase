@@ -21,7 +21,7 @@ const sectionStyle = computed(() => landingSectionStyle(props.bgImage, props.bgC
   <section id="menu" class="landing-fade-up px-6 py-24" :style="sectionStyle">
     <div class="mx-auto grid max-w-6xl items-center gap-16 lg:grid-cols-2">
       <div>
-        <p class="mb-4 text-sm font-semibold tracking-[0.25em] text-amber-500 uppercase">
+        <p class="mb-4 text-sm font-semibold text-amber-500">
           {{ t('config.landingSpiceHavenMenuLabel') }}
         </p>
         <p class="font-serif text-2xl leading-relaxed text-amber-100/90 md:text-3xl">

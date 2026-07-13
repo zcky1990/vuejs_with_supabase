@@ -66,7 +66,7 @@ function servicesWaLink(text: string) {
 </script>
 
 <template>
-  <ApplicationLayout show-staff-button>
+  <ApplicationLayout>
     <div class="w-full bg-stone-950 text-amber-50">
       <div class="landing-scroll-progress fixed top-0 right-0 left-0 z-[60] h-0.5 origin-left scale-x-0" :style="{ backgroundColor: primaryColor }" />
       <section id="hero" class="landing-fade-in relative flex min-h-screen flex-col">
@@ -79,7 +79,7 @@ function servicesWaLink(text: string) {
         <div class="absolute inset-0 bg-stone-950/60" />
         <SpiceHavenNav :shop-name="shopName" :accent-color="primaryColor" :nav-logo-url="navLogoUrl" />
         <div class="landing-hero-choreo landing-fade-up landing-delay-1 relative z-10 flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-          <p v-if="displayTagline" class="mb-4 text-sm font-semibold tracking-[0.2em] text-amber-400 uppercase">
+          <p v-if="displayTagline" class="mb-4 text-sm font-semibold text-amber-400">
             {{ displayTagline }}
           </p>
           <h1 class="landing-text-reveal max-w-4xl font-serif text-5xl leading-tight font-light whitespace-pre-line md:text-6xl lg:text-7xl">
@@ -97,7 +97,7 @@ function servicesWaLink(text: string) {
               {{ t('config.landingSpiceHavenOrder') }}
             </Button>
           </RouterLink>
-          <ArrowDown class="mt-16 size-6 animate-bounce text-amber-400/60" />
+          <ArrowDown class="mt-16 size-6 animate-pulse text-amber-400/60" />
         </div>
       </section>
 
@@ -108,7 +108,7 @@ function servicesWaLink(text: string) {
         :style="aboutStyle"
       >
         <div class="mx-auto max-w-6xl">
-          <p class="mb-2 text-center text-sm tracking-[0.25em] text-amber-500 uppercase">
+          <p class="mb-2 text-center text-sm text-amber-500">
             {{ aboutLabel || t('config.landingSpiceHavenAbout') }}
           </p>
           <h2 class="mb-6 text-center font-serif text-3xl text-amber-50 md:text-4xl">
@@ -181,7 +181,7 @@ function servicesWaLink(text: string) {
         :style="servicesStyle"
       >
         <div class="mx-auto max-w-6xl">
-          <p class="mb-2 text-center text-sm tracking-[0.25em] text-amber-500 uppercase">
+          <p class="mb-2 text-center text-sm text-amber-500">
             {{ t('config.landingSpiceHavenServices') }}
           </p>
           <h2 class="mb-3 text-center font-serif text-3xl text-amber-50">
@@ -254,7 +254,7 @@ function servicesWaLink(text: string) {
         :style="contactStyle"
       >
         <div class="mx-auto max-w-6xl">
-          <p class="mb-2 text-center text-sm tracking-[0.25em] text-amber-500 uppercase">
+          <p class="mb-2 text-center text-sm text-amber-500">
             {{ t('config.landingContactLabel') }}
           </p>
           <h2 class="mb-10 text-center font-serif text-3xl text-amber-50">
