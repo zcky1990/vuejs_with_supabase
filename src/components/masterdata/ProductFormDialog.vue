@@ -45,7 +45,6 @@ type ProductFormState = {
   description: string
   price: number
   purchase_price: number
-  stock_quantity: number
   sku: string
   image_url: string
   is_addons: boolean
@@ -79,7 +78,6 @@ const defaultForm = (): ProductFormState => ({
   description: '',
   price: 0,
   purchase_price: 0,
-  stock_quantity: 0,
   sku: '',
   image_url: '',
   is_addons: false,
@@ -210,7 +208,6 @@ watch(
           description: props.product.description ?? '',
           price: props.product.price,
           purchase_price: props.product.purchase_price ?? 0,
-          stock_quantity: props.product.stock_quantity,
           sku: props.product.sku ?? '',
           image_url: props.product.image_url ?? '',
           is_addons: props.product.is_addons ?? false,
@@ -240,7 +237,6 @@ async function handleSubmit() {
     description: form.value.description || null,
     price: form.value.price,
     purchase_price: form.value.purchase_price,
-    stock_quantity: form.value.stock_quantity,
     sku: form.value.sku || null,
     image_url: form.value.image_url || null,
     is_addons: form.value.is_addons,
@@ -355,32 +351,6 @@ async function handleSubmit() {
                 {{ t('master.purchasePriceHint') }}
               </p>
               <p v-if="errors.purchase_price" class="text-sm text-destructive">{{ errors.purchase_price }}</p>
-            </Field>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <Field>
-              <FieldLabel for="product-stock">{{ product ? t('master.stockCurrent') : t('master.stockInitial') }}</FieldLabel>
-              <Input
-                v-if="!product"
-                id="product-stock"
-                v-model.number="form.stock_quantity"
-                type="number"
-                min="0"
-                required
-              />
-              <div v-else class="space-y-1">
-                <Input
-                  id="product-stock"
-                  :model-value="form.stock_quantity"
-                  type="number"
-                  disabled
-                />
-                <p class="text-xs text-muted-foreground">
-                  {{ t('master.stockRestockHint') }}
-                </p>
-              </div>
-              <p v-if="errors.stock_quantity" class="text-sm text-destructive">{{ errors.stock_quantity }}</p>
             </Field>
           </div>
 

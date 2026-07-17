@@ -1,0 +1,15 @@
+ALTER TABLE shop_config
+  ADD COLUMN IF NOT EXISTS landing_about_enabled      boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS landing_about_label        text,
+  ADD COLUMN IF NOT EXISTS landing_about_title        text,
+  ADD COLUMN IF NOT EXISTS landing_about_description  text,
+  ADD COLUMN IF NOT EXISTS landing_about_image_url    text,
+  ADD COLUMN IF NOT EXISTS landing_about_bullets      jsonb,
+  ADD COLUMN IF NOT EXISTS landing_about_bg_color     text    NOT NULL DEFAULT '#ffffff',
+  ADD COLUMN IF NOT EXISTS landing_why_enabled        boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS landing_why_label          text,
+  ADD COLUMN IF NOT EXISTS landing_why_title          text,
+  ADD COLUMN IF NOT EXISTS landing_why_description    text,
+  ADD COLUMN IF NOT EXISTS landing_why_features       jsonb,
+  ADD COLUMN IF NOT EXISTS landing_why_stats          jsonb,
+  ADD COLUMN IF NOT EXISTS landing_why_bg_color       text    NOT NULL DEFAULT '#f2f2f2';

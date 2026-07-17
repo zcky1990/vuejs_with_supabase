@@ -346,6 +346,41 @@ order by table_name;
 
 Harus mengembalikan **13** baris (termasuk `customer_point_ledger` setelah DDL 39–41).
 
+### Cara menjalankan dengan Supabase CLI (disarankan)
+
+> **Butuh Supabase CLI** — sudah terinstall sebagai dev dependency (`pnpm add -D supabase`).
+
+```bash
+# 1. Login ke Supabase
+npx supabase login
+
+# 2. Link project (dapatkan project ref dari Dashboard → Settings → General)
+npx supabase link --project-ref <PROJECT_REF>
+
+# 3. Push semua migration ke database
+pnpm migrate:push
+```
+
+Semua file SQL dari `supabase/migrations/` akan dijalankan berurutan. Supabase otomatis skip yang sudah pernah di-applied.
+
+#### Perintah migration
+
+| Perintah | Fungsi |
+|----------|--------|
+| `pnpm migrate:new <nama>` | Buat file migration baru |
+| `pnpm migrate:push` | Push migration ke database |
+| `pnpm migrate:pull` | Backup schema dari remote |
+| `pnpm migrate:list` | Lihat daftar migration lokal |
+| `pnpm migrate:status` | Cek status migration di remote |
+| `pnpm migrate:repair <versi>` | Tandai migration sebagai applied (perbaikan) |
+| `pnpm migrate:ddl` | Konversi `DDL/*.ddl` → `supabase/migrations/` |
+
+#### Alternatif: SQL Editor (manual)
+
+1. Buka file `.ddl` di folder `DDL/` berurutan.
+2. Di Supabase → **SQL** → **New query** → paste → **Run**.
+3. Ulangi untuk setiap file.
+
 ---
 
 ## Konfigurasi Aplikasi Lokal
