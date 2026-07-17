@@ -375,12 +375,17 @@ export async function applyStockMovement(
 
     const fifo = await consumeFifoLots(supabaseClient, productId, quantity)
     if (fifo.error) {
-      return { movement: null, error: fifo.error }
+      // If no restock batches exist (product has stock but no lots),
+      // allocate remaining stock at zero cost rather than blocking the sale
+      const bestEffort = await consumeFifoLotsBestEffort(supabaseClient, productId, quantity)
+      allocations = bestEffort.allocations
+      totalCost = bestEffort.totalCost
+      stockAfter = stockBefore - quantity
+    } else {
+      allocations = fifo.allocations
+      totalCost = fifo.totalCost
+      stockAfter = stockBefore - quantity
     }
-
-    allocations = fifo.allocations
-    totalCost = fifo.totalCost
-    stockAfter = stockBefore - quantity
   } else {
     stockAfter = stockBefore + quantity
   }
